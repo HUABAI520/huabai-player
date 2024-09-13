@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ithe.huabaiplayer.player.mapper.AnimeIndexMapper">
+    <!-- 查询AnimeIndexVo数据 -->
+    <select id="getAnimeIndexVoById" resultMap="AnimeIndexVoResultMap">
+        SELECT ai.*,
+               GROUP_CONCAT(DISTINCT t.type ORDER BY t.id) AS kinds,
+               v.*,v.video_id AS lookVideoId
+        FROM anime_index ai
+                 LEFT JOIN
+             hua_anime_type ht ON ai.id = ht.anime_id
+                 LEFT JOIN
+             hua_type t ON ht.type_id = t.id
+                 LEFT JOIN
+             video_record v ON ai.id = v.anime_id and v.user_id = #{userId}
+        WHERE ai.id = #{id};
+    </select>
+
+    <!-- AnimeIndexVo ResultMap -->
+    <resultMap id="AnimeIndexVoResultMap" type="com.ithe.huabaiplayer.player.model.vo.AnimeIndexVo">
+    </resultMap>
+</mapper>
