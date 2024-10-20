@@ -17,7 +17,7 @@ public class codeTests {
     public static void main(String[] args) {
         //配置数据源
         HikariDataSource dataSource = new HikariDataSource();
-        dataSource.setJdbcUrl("jdbc:mysql://127.0.0.1:3306/hua_anime?characterEncoding=utf-8");
+        dataSource.setJdbcUrl("jdbc:mysql://127.0.0.1:3306/hua_anime_minio?characterEncoding=utf-8");
         dataSource.setUsername("root");
         dataSource.setPassword("123456");
 
@@ -27,6 +27,7 @@ public class codeTests {
 
         //通过 datasource 和 globalConfig 创建代码生成器
         Generator generator = new Generator(dataSource, globalConfig);
+
 
         //生成代码
         generator.generate();
@@ -73,7 +74,7 @@ public class codeTests {
         //设置表前缀和只生成哪些表，setGenerateTable 未配置时，生成所有表
         globalConfig.getStrategyConfig()
                 .setTablePrefix("")
-        .setGenerateTable("video_record");
+        .setGenerateTable("anime_play_counts");
 
         //设置生成 entity 并启用 Lombok
         globalConfig.enableEntity()

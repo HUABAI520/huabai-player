@@ -36,6 +36,7 @@ import static com.ithe.huabaiplayer.common.constant.RedisKeyConstants.DONGMAN_IN
 @Service
 @RequiredArgsConstructor
 @Slf4j
+//@ConditionalOnProperty(name = "file.use", havingValue = "local")// 条件装配Bean
 public class LocalFileService implements FileStorage {
     private final RedisService redisService;
     private final PlayerProperties playerProperties;
@@ -233,6 +234,27 @@ public class LocalFileService implements FileStorage {
     @Override
     public String getVideoPath(String video) {
         return playerProperties.getPath(video);
+    }
+
+    @Override
+    public String getOrigin(String url) {
+        // url 去除 pictureProperties.getIpPath()
+        return url.replace(pictureProperties.getIpPath(), "");
+    }
+
+    @Override
+    public void deleteAvatar(String avatar) {
+        // todo
+    }
+
+    @Override
+    public void uploadAvatar(String avatar, MultipartFile file) throws IOException {
+        // todo
+    }
+
+    @Override
+    public String getAvatarUrl(String avatar) {
+        return "";
     }
 
     @Override

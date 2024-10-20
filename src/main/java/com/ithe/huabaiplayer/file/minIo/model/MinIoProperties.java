@@ -18,4 +18,5 @@ public class MinIoProperties {
     private String accessKey;
 
     private String secretKey;
+
 }

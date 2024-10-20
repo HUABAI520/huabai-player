@@ -7,7 +7,7 @@
     <select id="getAnimeIndexVoById" resultMap="AnimeIndexVoResultMap">
         SELECT ai.*,
                GROUP_CONCAT(DISTINCT t.type ORDER BY t.id) AS kinds,
-               v.*,v.video_id AS lookVideoId
+               v.*,v.video_id AS lookVideoId,u.score AS userScore,u.id AS ratingId
         FROM anime_index ai
                  LEFT JOIN
              hua_anime_type ht ON ai.id = ht.anime_id
@@ -15,8 +15,12 @@
              hua_type t ON ht.type_id = t.id
                  LEFT JOIN
              video_record v ON ai.id = v.anime_id and v.user_id = #{userId}
-        WHERE ai.id = #{id};
+                LEFT JOIN
+             user_rating u ON ai.id = u.anime_id and u.user_id = #{userId}
+        WHERE ai.id = #{id}
+        GROUP BY ai.id,v.id,u.id;
     </select>
+
 
     <!-- AnimeIndexVo ResultMap -->
     <resultMap id="AnimeIndexVoResultMap" type="com.ithe.huabaiplayer.player.model.vo.AnimeIndexVo">

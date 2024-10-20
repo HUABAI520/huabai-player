@@ -7,6 +7,7 @@ import com.ithe.huabaiplayer.user.model.entity.User;
 import com.ithe.huabaiplayer.user.model.vo.UserVO;
 import com.mybatisflex.core.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -92,4 +93,5 @@ public interface UserService extends IService<User> {
 
     Boolean updateUserAdmin(UserVO userVO, HttpServletRequest request);
 
+    String uploadFile(MultipartFile multipartFile, UserVO user);
 }

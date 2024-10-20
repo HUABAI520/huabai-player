@@ -243,6 +243,20 @@ public class HuaUtils {
         return pinyinBuilder.toString().toUpperCase();
     }
 
+    // 获取首个字的拼音的第一个字母且大写
+    public static String getFirstPinYin(String chineseText) {
+        StringBuilder pinyinBuilder = new StringBuilder();
+        char[] chars = chineseText.toCharArray();
+
+        String[] pinyinArray = PinyinHelper.toHanyuPinyinStringArray(chars[0]);
+        if (pinyinArray != null) {
+            pinyinBuilder.append(pinyinArray[0].charAt(0)); // 选择第一个拼音的首字母
+        } else {
+            pinyinBuilder.append(chars[0]);
+        }
+        return pinyinBuilder.toString().toUpperCase();
+    }
+
     /**
      * 字符串转化为Base64
      */
@@ -298,5 +312,86 @@ public class HuaUtils {
         }
         // 重新组装路径
         return String.join("/", parts);
+    }
+
+    /**
+     * 获取最大的位数
+     */
+    public static int getRadix(int[] arr) {
+        int max = Integer.MIN_VALUE;
+        for (int num : arr) {
+            max = Math.max(max, num);
+        }
+        int radix = 0;
+        while (max > 0) {
+            radix++;
+            max /= 10;
+        }
+        return radix;
+    }
+
+    /**
+     * 获取该数在第几位的值
+     */
+    public static int getRadix(int num, int radix) {
+        int result = 0;
+        for (int i = 1; i <= radix; i++) {
+            result = num % (10);
+            num = num / 10;
+        }
+        return result;
+    }
+
+    /**
+     * 基数排序优化版 （数组）
+     *
+     * @param arr 数组
+     */
+    public static void radixSort(int[] arr) {
+        radixSort(arr, getRadix(arr), true);
+    }
+
+    public static void radixSort(int[] arr, boolean isAsc) {
+        radixSort(arr, getRadix(arr), isAsc);
+    }
+
+    /**
+     * 基数排序优化版 （数组）
+     *
+     * @param arr   数组
+     * @param radix 最大数的深度
+     */
+    public static void radixSort(int[] arr, int radix, boolean isAsc) {
+        int len = arr.length;
+        final int base = 10;
+        int[] bucket = new int[len];
+        for (int i = 1; i <= radix; i++) {
+            int[] count = new int[base];
+            for (int a : arr) {
+                count[getRadix(a, i)]++;
+            }
+            inRadix(isAsc, base, count);
+            // 放入辅助桶 通过对应位数的排序
+            for (int j = len - 1; j >= 0; j--) {
+                int x = getRadix(arr[j], i);
+                bucket[count[x] - 1] = arr[j];
+                count[x]--;
+            }
+            System.arraycopy(bucket, 0, arr, 0, arr.length);
+        }
+    }
+
+    private static void inRadix(boolean isAsc, int base, int[] count) {
+        if (isAsc) {
+            // 求前缀和
+            for (int j = 1; j < base; j++) {
+                count[j] += count[j - 1];
+            }
+        } else {
+            // 求后缀和
+            for (int j = base - 2; j >= 0; j--) {
+                count[j] += count[j + 1];
+            }
+        }
     }
 }

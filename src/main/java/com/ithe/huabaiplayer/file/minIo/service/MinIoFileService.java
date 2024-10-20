@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 import static com.ithe.huabaiplayer.common.constant.RedisKeyConstants.DONGMAN_FENPIAN;
 import static com.ithe.huabaiplayer.common.constant.RedisKeyConstants.DONGMAN_INDEX;
@@ -32,7 +33,9 @@ import static com.ithe.huabaiplayer.common.constant.RedisKeyConstants.DONGMAN_IN
 @Service
 @RequiredArgsConstructor
 @Slf4j
+//@ConditionalOnProperty(name = "file.use", havingValue = "minio")// 条件装配Bean
 public class MinIoFileService implements FileStorage {
+    public static final int TWO_HOUR = 60 * 2;
     private final MinIoService minIoService;
     private final RedisService redisService;
     private final MinIoProperties minIoProperties;
@@ -177,12 +180,45 @@ public class MinIoFileService implements FileStorage {
     @SneakyThrows
     public String getVideoUrl(String video) {
         return minIoService.getPresignedUrlWithCache(
-                BucketEnum.HUA_VIDEO.getBucketName(), video, 60 * 12);
+                BucketEnum.HUA_VIDEO.getBucketName(), video, TWO_HOUR);
     }
 
     @Override
     public String getVideoPath(String video) {
         return video;
+    }
+
+    @Override
+    public String getOrigin(String url) {
+        String[] split = url.split("://");
+        if (split.length < 2) {
+            return "";
+        }
+        String[] strings = split[1].split("/");
+        if (strings.length < 3) {
+            return "";
+        }
+        StringJoiner joiner = new StringJoiner("/");
+        for (int i = 2; i < strings.length - 1; i++) {
+            joiner.add(strings[i]);
+        }
+        return joiner.toString();
+    }
+
+    @Override
+    public void deleteAvatar(String avatar) {
+        minIoService.deleteFile(BucketEnum.HUA_AVATAR.getBucketName(), avatar);
+    }
+
+    @Override
+    public void uploadAvatar(String avatar, MultipartFile file) throws IOException {
+        minIoService.uploadObject(BucketEnum.HUA_AVATAR.getBucketName(), avatar, file.getInputStream(), file.getSize());
+    }
+
+    @Override
+    public String getAvatarUrl(String avatar) {
+        return minIoProperties.getEndpoint() + "/" + BucketEnum.HUA_AVATAR.getBucketName() + "/" + avatar;
+
     }
 
     @Override

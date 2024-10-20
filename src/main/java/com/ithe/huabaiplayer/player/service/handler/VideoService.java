@@ -281,9 +281,12 @@ public class VideoService {
                 .where(VIDEO_RECORD.USER_ID.eq(userId))
                 .orderBy(VIDEO_RECORD.UPDATE_TIME.desc());
         if (StringUtils.isNotBlank(key)) {
-            query.like(AnimeVideos::getTitle, key).or(q -> {
-                q.like(AnimeIndex::getName, key);
+            query.and(q -> {
+                q.like(AnimeVideos::getTitle, key).or(q2 -> {
+                    q2.like(AnimeIndex::getName, key);
+                });
             });
+
         }
         return query;
     }

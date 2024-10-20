@@ -19,6 +19,7 @@ import com.ithe.huabaiplayer.player.model.dto.anime.AnimeQueryReq;
 import com.ithe.huabaiplayer.player.model.dto.anime.AnimeUpdateReq;
 import com.ithe.huabaiplayer.player.model.dto.animeVideos.AnimeVideosResp;
 import com.ithe.huabaiplayer.player.model.entity.AnimeIndex;
+import com.ithe.huabaiplayer.player.model.entity.AnimePlayCounts;
 import com.ithe.huabaiplayer.player.model.entity.AnimeVideos;
 import com.ithe.huabaiplayer.player.model.entity.HuaAnimeType;
 import com.ithe.huabaiplayer.player.model.entity.HuaType;
@@ -26,6 +27,7 @@ import com.ithe.huabaiplayer.player.model.prefix.PictureProperties;
 import com.ithe.huabaiplayer.player.model.prefix.PlayerProperties;
 import com.ithe.huabaiplayer.player.model.vo.AnimeIndexVo;
 import com.ithe.huabaiplayer.player.service.AnimeIndexService;
+import com.ithe.huabaiplayer.player.service.AnimePlayCountsService;
 import com.ithe.huabaiplayer.player.service.AnimeVideosService;
 import com.ithe.huabaiplayer.player.service.HuaAnimeTypeService;
 import com.mybatisflex.core.paginate.Page;
@@ -34,6 +36,7 @@ import com.mybatisflex.core.util.UpdateEntity;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,6 +81,8 @@ public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIn
     private PictureProperties pictureProperties;
     @Autowired
     private FileFactory fileFactory;
+    @Autowired
+    private AnimePlayCountsService countsService;
 
 
     private FileStorage fileService() {
@@ -111,6 +116,15 @@ public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIn
 
     @Override
     public AnimeIndexResp getAnimeById(Long id, Long userId) {
+        AnimeIndexResp resp = getAnimeIndexResp(id, userId);
+        Long playCount = countsService.getPlayCount(resp.getId());
+        resp.setPlayCount(playCount);
+        return resp;
+    }
+
+    @NotNull
+    // todo 添加缓存
+    public AnimeIndexResp getAnimeIndexResp(Long id, Long userId) {
         AnimeIndexVo animeIndexVoById = animeIndexMapper.getAnimeIndexVoById(id, userId);
         String image = animeIndexVoById.getImage();
         if (StringUtils.isNotBlank(image)) {
@@ -246,6 +260,7 @@ public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIn
         animeIndex.setFolder(fId);
         boolean save = this.save(animeIndex);
         if (save) {
+            countsService.save(AnimePlayCounts.builder().animeId(animeIndex.getId()).build());
             Long id = animeIndex.getId();
             // 视频图片
             if (StringUtils.isNotBlank(fileSuffix)) {

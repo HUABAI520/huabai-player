@@ -11,6 +11,7 @@ import lombok.Getter;
 public enum BucketEnum {
     HUA_VIDEO("hua-video", "视频桶"),
     HUA_PICTURE("hua-picture", "图片桶"),
+    HUA_AVATAR("hua-avatar", "头像桶"),
     ;
 
     private final String bucketName;

@@ -107,6 +107,11 @@ public class AnimeIndexVo implements Serializable {
 
     private Long lookVideoId;
     private Long seek;
+    /**
+     * 用户对这个动漫的评分
+     */
+    private BigDecimal userScore;
+    private Long ratingId;
 
     public static AnimeIndexResp of(AnimeIndexVo animeIndexVo) {
         return AnimeIndexResp.builder()
@@ -131,6 +136,8 @@ public class AnimeIndexVo implements Serializable {
                 .updateTime(animeIndexVo.getUpdateTime())
                 .lookVideoId(animeIndexVo.getLookVideoId())
                 .seek(animeIndexVo.getSeek())
+                .userScore(animeIndexVo.getUserScore())
+                .ratingId(animeIndexVo.getRatingId())
                 .build();
     }
 

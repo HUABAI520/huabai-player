@@ -1,0 +1,129 @@
+spring:
+  application:
+    name: huabai-player
+  # ?? dev ??
+  profiles:
+    active: dev
+
+  # ?? swagger3
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  #    view:
+  #      prefix: classpath:/static/
+  #      suffix: .html
+  # session ??
+  session:
+    store-type: redis
+    timeout: 25600
+  # ?????
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    #    url: jdbc:mysql://localhost:3306/hua_anime
+    url: jdbc:mysql://localhost:3306/hua_anime_minio
+    username: root
+    password: 123456
+  #  datasource:
+  #    driver-class-name: com.mysql.cj.jdbc.Driver
+  #    url: jdbc:mysql://localhost:3306/computer_store
+  #    username: root
+  #    password: 123456
+  # Redis ??
+  #  redis:
+  #    database: 5
+  #    host: r-2vcpybpq3ry1ehgmljpd.redis.cn-chengdu.rds.aliyuncs.com
+  #    port: 6379
+  #    password: H123456l
+  #    username: default
+  # Elasticsearch ??
+  # todo ????????????
+  #  elasticsearch:
+  #    uris: http://localhost:9200
+  #    username: root
+  #    password: 123456
+  # ????
+  servlet:
+    multipart:
+      # ????
+      max-file-size: 1000MB  #???????????
+      max-request-size: 1200MB #???????????
+  data:
+    redis:
+      database: 5
+
+      host: 127.0.0.1
+      port: 6379
+
+      timeout: 1800000
+server:
+  address: 0.0.0.0
+  port: 9999
+  servlet:
+    # cookie 30 ???
+    session:
+      cookie:
+        max-age: 2592000
+    encoding:
+      enabled: true
+      charset: UTF-8
+      force: true
+mybatis-flex:
+  configuration:
+    map-underscore-to-camel-case: true # 下划线到驼峰的映射
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # SQL日志输出实现
+  global-config:
+    logic-delete-column: isDelete
+    deleted-value-of-logic-delete: 1
+    normal-value-of-logic-delete: 0
+# ????
+wx:
+  # ??????
+  # todo ?????
+  mp:
+    token: xxx
+    aesKey: xxx
+    appId: xxx
+    secret: xxx
+    config-storage:
+      http-client-type: HttpClient
+      key-prefix: wx
+      redis:
+        host: 127.0.0.1
+        port: 6379
+      type: Memory
+  # ??????
+  # todo ?????
+  open:
+    appId: xxx
+    appSecret: xxx
+# ????
+# todo ?????
+cos:
+  client:
+    accessKey: xxx
+    secretKey: xxx
+    region: xxx
+    bucket: xxx
+## todo 注意： minIo 和 本地文件 请使用两个不同的数据库！！！！！！（todo 后续改造微服务可以优化~！）
+# 如果未使用minIo 请配置服务器本地文件路径 与服务器ip访问路径
+avatar:
+  # ??????
+  uploadPath: home/picture/touxiang
+  ipPurchase: http://8.137.78.53/add/purchase-add/?id=
+  # ?????ip?? ?????ip
+  ipOrDomain: http://8.137.78.53/touxiang/
+shiping:
+  uploadPath: E:/videos-spring
+  ipPath: http://10.21.26.250:9999/api-player/play/video2
+picture:
+  uploadPath: E:/videos-picture-spring
+  dongman: /dongman
+  ipPath: http://10.21.26.250:9999/picture
+# 使用minIo 的配置 上面配置可省略
+minio:
+  endpoint: http://10.21.26.250:9000
+  access-key: xxx
+  secret-key: xxx
+file:
+  #  use: local # 填写minio/local
+  use: minio # 填写minio/local

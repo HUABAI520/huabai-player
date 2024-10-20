@@ -2,12 +2,14 @@ package com.ithe.huabaiplayer.user.service.impl;
 
 
 import cn.hutool.core.util.ReUtil;
-
 import com.ithe.huabaiplayer.common.ErrorCode;
 import com.ithe.huabaiplayer.common.constant.RedisKeyConstants;
 import com.ithe.huabaiplayer.common.constant.UserConstant;
 import com.ithe.huabaiplayer.common.exception.BusinessException;
 import com.ithe.huabaiplayer.common.model.enums.UserRoleEnum;
+import com.ithe.huabaiplayer.common.utils.HuaUtils;
+import com.ithe.huabaiplayer.file.factory.FileFactory;
+import com.ithe.huabaiplayer.file.service.FileStorage;
 import com.ithe.huabaiplayer.user.mapper.UserMapper;
 import com.ithe.huabaiplayer.user.model.dto.user.UserRegisterRequest;
 import com.ithe.huabaiplayer.user.model.entity.User;
@@ -24,8 +26,9 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
-
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -50,6 +53,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
+    @Resource
+    private FileFactory fileFactory;
+
+
+    private FileStorage fileService() {
+        return fileFactory.getFileService();
+    }
 
     /**
      * 用户注册
@@ -147,6 +157,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         // 脱敏
         UserVO userVO = this.getUserVO(user);
+        String avatar = userVO.getUserAvatar();
+        if (StringUtils.isNotBlank(avatar)) {
+            userVO.setUserAvatar(fileService().getAvatarUrl(avatar));
+        }
         Long userVOId = userVO.getId();
         redisTemplate.opsForValue().set(RedisKeyConstants.USER_VO + userVOId, userVO, 1, TimeUnit.HOURS);
         // 记录用户的登录态
@@ -211,11 +225,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             if (userVO.getUserStatus() == 1) {
                 throw new BusinessException(ErrorCode.OPERATION_ERROR, "用户已被禁用");
             }
-            redisTemplate.opsForValue().set(RedisKeyConstants.USER_VO + userVOId, userVO, 1, TimeUnit.HOURS);
+            String avatar = userVO.getUserAvatar();
+            if (StringUtils.isNotBlank(avatar)) {
+                userVO.setUserAvatar(fileService().getAvatarUrl(avatar));
+            }
+//            redisTemplate.opsForValue().set(RedisKeyConstants.USER_VO + userVOId, userVO, 1, TimeUnit.HOURS);
         }
         if (userVO.getUserStatus() == 1) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "用户已被禁用");
         }
+
         // 更新对应的userVO对象时间
         redisTemplate.opsForValue().set(RedisKeyConstants.USER_VO + userVOId, userVO, 1, TimeUnit.HOURS);
         // 返回userVO对象
@@ -291,6 +310,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return true;
     }
 
+
     /**
      * 判断用户是否是管理员
      *
@@ -334,6 +354,48 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             redisTemplate.opsForValue().set(RedisKeyConstants.USER_VO + id, this.getUserVO(user), 1, TimeUnit.HOURS);
         }
         return b;
+    }
+
+
+    /**
+     * 用户上传/更新头像
+     *
+     * @return url
+     */
+    @Override
+    public String uploadFile(MultipartFile multipartFile, UserVO user) {
+        String fileSuffix = HuaUtils.validPictureFile(multipartFile);
+        String avatar = user.getUserAvatar();
+        if (StringUtils.isNotBlank(avatar)) {
+            // 删除之前的头像
+            String origin = fileService().getOrigin(avatar);
+            if (StringUtils.isNotBlank(origin)) {
+                try {
+                    fileService().deleteAvatar(origin);
+                } catch (Exception e) {
+                    log.error("在更新头像的时候删除头像失败了~", e);
+                }
+            }
+        }
+        // 获取当前6位时间戳
+        String timestamp = HuaUtils.generateTimestamp();
+        String fileName = timestamp + "." + fileSuffix;
+        String username = user.getUsername();
+        Long id = user.getId();
+        // 获取用户名称第一个的字母
+        String pinYin = HuaUtils.getFirstPinYin(username);
+        String avatarNew = pinYin + "/" + id + "/" + fileName;
+        updateChain().set(User::getUserAvatar, avatarNew)
+                .eq(User::getId, id).update();
+        try {
+            fileService().uploadAvatar(avatarNew, multipartFile);
+        } catch (IOException e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "上传头像失败");
+        }
+        String url = fileService().getAvatarUrl(avatarNew);
+        user.setUserAvatar(url);
+        redisTemplate.opsForValue().set(RedisKeyConstants.USER_VO + id, user, 1, TimeUnit.HOURS);
+        return url;
     }
 
 

@@ -30,6 +30,14 @@ public interface FileStorage {
 
     String getVideoPath(String video);
 
+    String getOrigin(String url);
+
+    void deleteAvatar(String avatar);
+
+    void uploadAvatar(String avatar, MultipartFile file) throws IOException;
+
+    String getAvatarUrl(String avatar);
+
     boolean createAnimeFolder(String savePath);
 
     /**

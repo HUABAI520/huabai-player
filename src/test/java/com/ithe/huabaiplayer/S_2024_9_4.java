@@ -1,5 +1,6 @@
 package com.ithe.huabaiplayer;
 
+import com.ithe.huabaiplayer.common.utils.HuaUtils;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -62,5 +63,10 @@ public class S_2024_9_4 {
             }
         }
         return max;
+    }
+    @Test
+    public void test2() {
+        String pinYin = HuaUtils.getFirstPinYin("啊啊啊啊");
+        System.out.println(pinYin);
     }
 }

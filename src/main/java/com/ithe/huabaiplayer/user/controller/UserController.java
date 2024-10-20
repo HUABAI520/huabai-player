@@ -9,6 +9,7 @@ import com.ithe.huabaiplayer.common.constant.OperationModule;
 import com.ithe.huabaiplayer.common.constant.OperationType;
 import com.ithe.huabaiplayer.common.constant.UserConstant;
 import com.ithe.huabaiplayer.common.exception.BusinessException;
+import com.ithe.huabaiplayer.common.utils.UserContext;
 import com.ithe.huabaiplayer.user.model.dto.user.UserLoginRequest;
 import com.ithe.huabaiplayer.user.model.dto.user.UserRegisterRequest;
 import com.ithe.huabaiplayer.user.model.result.LoginResult;
@@ -22,7 +23,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import static com.ithe.huabaiplayer.common.utils.HuaUtils.hasNonEmptyFields;
 
@@ -122,4 +125,10 @@ public class UserController {
         return ResultUtils.success(b);
     }
 
+    @PostMapping("/upload")
+    @AuthCheck(mustRole = UserConstant.USER_DETAIL)
+    public BaseResponse<String> uploadFile(@RequestPart("file") MultipartFile multipartFile) {
+        UserVO user = UserContext.getUser();
+        return ResultUtils.success(userService.uploadFile(multipartFile, user));
+    }
 }

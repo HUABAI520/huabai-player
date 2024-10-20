@@ -7,6 +7,7 @@ import com.ithe.huabaiplayer.player.model.entity.HuaType;
 import com.ithe.huabaiplayer.player.service.HuaTypeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,6 +26,11 @@ public class HuaTypeController {
     @GetMapping("/getAll")
     @AuthCheck
     public BaseResponse<List<HuaType>> getAll(){
-        return ResultUtils.success(huaTypeService.list());
+        return ResultUtils.success(huaTypeService.getAll());
+    }
+    @PostMapping("/add")
+    @AuthCheck
+    public BaseResponse<List<HuaType>> add(HuaType huaType){
+        return ResultUtils.success(huaTypeService.insert(huaType));
     }
 }

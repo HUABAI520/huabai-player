@@ -106,11 +106,18 @@ public class AnimeIndexResp implements Serializable {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date updateTime;
-
-
     /**
      * 该动漫对应用户id的记录
      */
     private Long lookVideoId;
     private Long seek;
+    /**
+     * 用户对这个动漫的评分
+     */
+    private BigDecimal userScore;
+    private Long ratingId;
+    /**
+     * 该动漫的播放量
+     */
+    private Long playCount;
 }

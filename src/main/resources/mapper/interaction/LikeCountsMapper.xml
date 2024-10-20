@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ithe.huabaiplayer.interaction.mapper.LikeCountsMapper">
+    <update id="updateOrInsertBatchSelective" parameterType="java.util.List">
+        INSERT INTO like_counts (third_id, third_type, count)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.thirdId}, #{item.thirdType}, #{item.count})
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+        count = count + VALUES(count)
+    </update>
+
+
+
+</mapper>

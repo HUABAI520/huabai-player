@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ithe.huabaiplayer.interaction.mapper.LikesMapper">
+    <delete id="deleteBatchSelective" parameterType="java.util.List">
+        DELETE FROM likes
+        <where>
+            <foreach collection="list" item="item" separator=" OR ">
+                (user_id = #{item.userId} AND third_id = #{item.thirdId} AND third_type = #{item.thirdType})
+            </foreach>
+        </where>
+    </delete>
+<!--    <delete id="deleteBatchSelective" parameterType="java.util.List">-->
+<!--        DELETE FROM likes-->
+<!--        WHERE (userId, thirdId, thirdType) IN-->
+<!--        <foreach collection="list" item="item" separator="," open="(" close=")">-->
+<!--            (#{item.userId}, #{item.thirdId}, #{item.thirdType})-->
+<!--        </foreach>-->
+<!--    </delete>-->
+</mapper>
