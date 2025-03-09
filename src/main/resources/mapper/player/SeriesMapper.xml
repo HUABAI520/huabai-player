@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ithe.huabaiplayer.player.mapper.SeriesMapper">
+    <select id="getSeries" parameterType="map" resultType="com.ithe.huabaiplayer.player.model.dto.series.SeriesResp">
+        <bind name="offset" value="pageSize * (page -1)"/>
+        SELECT se.*, ai.image
+        FROM series se
+        LEFT JOIN (
+        SELECT series_id, image, issue_time ,another
+        FROM anime_index
+        WHERE (series_id, issue_time) IN (
+        SELECT series_id, MIN(issue_time) AS min_issue_time
+        FROM anime_index
+        GROUP BY series_id
+        )
+        ) ai ON se.id = ai.series_id
+        <!--        <where>-->
+        <!--            <if test="keyword != null and keyword != ''">-->
+        <!--                se.name LIKE CONCAT('%', #{keyword}, '%')-->
+        <!--                OR EXISTS (-->
+        <!--                SELECT 1-->
+        <!--                FROM anime_index ai-->
+        <!--                WHERE ai.series_id = se.id-->
+        <!--                AND (ai.name LIKE CONCAT('%', #{keyword}, '%')-->
+        <!--                OR ai.another LIKE CONCAT('%', #{keyword}, '%'))-->
+        <!--                )-->
+        <!--            </if>-->
+        <!--        </where>-->
+        ${qwSql}
+        limit ${pageOffset}, ${pageSize}
+    </select>
+    <select id="getSeries_COUNT" resultType="long">
+        select count(*)
+        FROM series se
+                 LEFT JOIN (SELECT series_id, image, issue_time,another
+                            FROM anime_index
+                            WHERE (series_id, issue_time) IN (SELECT series_id, MIN(issue_time) AS min_issue_time
+                                                              FROM anime_index
+                                                              GROUP BY series_id)) ai ON se.id = ai.series_id ${qwSql}
+    </select>
+</mapper>
