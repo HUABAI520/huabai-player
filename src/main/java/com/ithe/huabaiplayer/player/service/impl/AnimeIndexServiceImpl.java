@@ -12,6 +12,7 @@ import com.ithe.huabaiplayer.file.factory.FileFactory;
 import com.ithe.huabaiplayer.file.model.entity.FileNodes;
 import com.ithe.huabaiplayer.file.service.FileNodesService;
 import com.ithe.huabaiplayer.file.service.FileStorage;
+import com.ithe.huabaiplayer.interaction.service.CollectionAnimeUserService;
 import com.ithe.huabaiplayer.player.mapper.AnimeIndexMapper;
 import com.ithe.huabaiplayer.player.model.dto.anime.AnimeAddReq;
 import com.ithe.huabaiplayer.player.model.dto.anime.AnimeIndexResp;
@@ -26,6 +27,7 @@ import com.ithe.huabaiplayer.player.model.entity.HuaType;
 import com.ithe.huabaiplayer.player.model.prefix.PictureProperties;
 import com.ithe.huabaiplayer.player.model.prefix.PlayerProperties;
 import com.ithe.huabaiplayer.player.model.vo.AnimeIndexVo;
+import com.ithe.huabaiplayer.player.model.vo.Seriess;
 import com.ithe.huabaiplayer.player.service.AnimeIndexService;
 import com.ithe.huabaiplayer.player.service.AnimePlayCountsService;
 import com.ithe.huabaiplayer.player.service.AnimeVideosService;
@@ -83,10 +85,24 @@ public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIn
     private FileFactory fileFactory;
     @Autowired
     private AnimePlayCountsService countsService;
+    @Autowired
+    private CollectionAnimeUserService collectionAnimeUserService;
 
 
     private FileStorage fileService() {
         return fileFactory.getFileService();
+    }
+
+
+    private List<AnimeIndexResp> indexVo2Resp(List<AnimeIndexVo> animeIndexVos) {
+        return animeIndexVos.stream()
+                .map(r -> {
+                    String image = r.getImage();
+                    if (StringUtils.isNotBlank(image)) {
+                        r.setImage(fileService().getImageUrl(image));
+                    }
+                    return AnimeIndexVo.of(r);
+                }).toList();
     }
 
     @Override
@@ -101,24 +117,28 @@ public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIn
         List<AnimeIndexVo> records = animeIndexVoPage.getRecords();
         // 根据id去重
         // 如果需要保持原有顺序，可以使用以下方式：
-        List<AnimeIndexResp> deduplicatedRecordsWithOrder = records.stream()
-                .map(r -> {
-                    String image = r.getImage();
-                    if (StringUtils.isNotBlank(image)) {
-//                        r.setImage(pictureProperties.getIpPath() + image);
-                        r.setImage(fileService().getImageUrl(image));
-                    }
-                    return AnimeIndexVo.of(r);
-                }).toList();
-        page.setRecords(deduplicatedRecordsWithOrder);
+        List<AnimeIndexResp> list = indexVo2Resp(records);
+//        List<AnimeIndexResp> list = records.stream()
+//                .map(r -> {
+//                    String image = r.getImage();
+//                    if (StringUtils.isNotBlank(image)) {
+////                        r.setImage(pictureProperties.getIpPath() + image);
+//                        r.setImage(fileService().getImageUrl(image));
+//                    }
+//                    return AnimeIndexVo.of(r);
+//                }).toList();
+        page.setRecords(list);
         return page;
     }
 
     @Override
     public AnimeIndexResp getAnimeById(Long id, Long userId) {
         AnimeIndexResp resp = getAnimeIndexResp(id, userId);
+        // 获取播放次数 ， todo 也可以考虑添加缓存
         Long playCount = countsService.getPlayCount(resp.getId());
+        Boolean collected = collectionAnimeUserService.isCollected(userId, id);
         resp.setPlayCount(playCount);
+        resp.setIsCollect(collected ? 1 : 0);
         return resp;
     }
 
@@ -130,6 +150,7 @@ public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIn
         if (StringUtils.isNotBlank(image)) {
             animeIndexVoById.setImage(fileService().getImageUrl(image));
         }
+        // todo 添加缓存
         List<AnimeVideos> list = animeVideosService.list(query().eq(AnimeVideos::getAnimeId, id));
         // list 按照 rank 升序 次按照 crateTime 升序
         List<AnimeVideosResp> list1 = list.stream().map((l) -> {
@@ -143,6 +164,17 @@ public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIn
                         .thenComparing(AnimeVideosResp::getCrateTime)).toList();
         AnimeIndexResp resp = AnimeIndexVo.of(animeIndexVoById);
         resp.setVideos(list1);
+        // 查看是否属于某个系列
+        Integer seriesId = animeIndexVoById.getSeriesId();
+        if (seriesId != null) {
+            List<Seriess> seriesses = this.listAs(
+                    query().select(ANIME_INDEX.ID, ANIME_INDEX.NAME, ANIME_INDEX.SEASON_TITLE)
+                            .orderBy(AnimeIndex::getIssueTime, true)
+                            .eq(AnimeIndex::getSeriesId, seriesId),
+                    Seriess.class
+            );
+            resp.setSeries(seriesses);
+        }
         return resp;
     }
 
@@ -174,7 +206,8 @@ public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIn
             queryWrapper.leftJoin(HUA_ANIME_TYPE).on(ANIME_INDEX.ID.eq(HUA_ANIME_TYPE.ANIME_ID))
                     .leftJoin(HUA_TYPE).on(HUA_ANIME_TYPE.TYPE_ID.eq(HUA_TYPE.ID));
         }
-        queryWrapper.like(AnimeIndex::getName, name, StringUtils.isNotBlank(name))
+        queryWrapper
+//                .like(AnimeIndex::getName, name, StringUtils.isNotBlank(name))
                 .eq(AnimeIndex::getMonth, month, month != null)
                 .eq(AnimeIndex::getIsNew, isNew, isNew != null)
                 .like(AnimeIndex::getActRole, actRole, StringUtils.isNotBlank(actRole))
@@ -183,6 +216,15 @@ public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIn
                 .eq(AnimeIndex::getType, type, type != null)
                 .eq(HuaType::getType, kind, StringUtils.isNotBlank(kind))
                 .between(AnimeIndex::getIssueTime, startTime, endTime, startTime != null && endTime != null);
+        if (StringUtils.isNotBlank(name)) {
+            String finalName = name.replace("/", "*+-");
+            queryWrapper.and(q1 -> {
+                q1.like(AnimeIndex::getName, finalName)
+                        .or(q2 -> {
+                            q2.like(AnimeIndex::getAnother, finalName);
+                        });
+            });
+        }
         if (SqlUtils.validSortField(sortField)) {
             Boolean order = "ASC".equals(sortOrder);
             queryWrapper.orderBy(sortField, order);
@@ -279,6 +321,10 @@ public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIn
                 boolean isCreated = fileService().createAnimeFolder(savePath);
                 if (!isCreated) {
                     throw new BusinessException(ErrorCode.PARAMS_ERROR, "创建文件夹失败~");
+                }
+                // 上传图片
+                if (multipartFile != null) {
+                    updateAnimePicture(id, multipartFile, 1L);
                 }
                 return id;
             } catch (Exception e) {
@@ -493,8 +539,28 @@ public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIn
         return listAs(query()
                         .select(ANIME_INDEX.ID, ANIME_INDEX.NAME)
                         .from(ANIME_INDEX)
-                        .like(AnimeIndex::getName, name, StringUtils.isNotBlank(name))
+                        .and(q1 -> {
+                            q1.like(AnimeIndex::getName, name, StringUtils.isNotBlank(name))
+                                    .or(q2 -> {
+                                        q2.like(AnimeIndex::getAnother, name);
+                                    });
+                        })
+//                        .like(AnimeIndex::getName, name, StringUtils.isNotBlank(name))
                         .limit(10).orderBy(AnimeIndex::getIssueTime, false),
                 AnimeIndexResp.class);
+    }
+
+    @Override
+    public List<AnimeIndexResp> listByIds(List<Long> ids) {
+        return indexVo2Resp(
+                listAs(query().in(AnimeIndex::getId, ids).orderBy(AnimeIndex::getIssueTime, true), AnimeIndexVo.class)
+        );
+    }
+
+    @Override
+    public List<AnimeIndexResp> listBySeriesId(Integer sId) {
+        return indexVo2Resp(
+                listAs(query().eq(AnimeIndex::getSeriesId, sId).orderBy(AnimeIndex::getIssueTime, true), AnimeIndexVo.class)
+        );
     }
 }

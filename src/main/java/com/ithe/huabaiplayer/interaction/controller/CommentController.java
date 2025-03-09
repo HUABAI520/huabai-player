@@ -5,12 +5,11 @@ import com.ithe.huabaiplayer.common.ResultUtils;
 import com.ithe.huabaiplayer.common.annotation.AuthCheck;
 import com.ithe.huabaiplayer.common.utils.UserContext;
 import com.ithe.huabaiplayer.interaction.model.dto.req.CommentAddReq;
+import com.ithe.huabaiplayer.interaction.model.dto.resp.AddCommentResp;
 import com.ithe.huabaiplayer.interaction.model.dto.resp.CommentResp;
-import com.ithe.huabaiplayer.interaction.model.entity.Comment;
 import com.ithe.huabaiplayer.interaction.service.CommentService;
 import com.ithe.huabaiplayer.user.model.vo.UserVO;
 import com.mybatisflex.core.paginate.Page;
-import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +19,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.io.IOException;
 
 /**
  * @ClassName CommentController
@@ -56,7 +57,7 @@ public class CommentController {
 
     @PostMapping
     @AuthCheck
-    public BaseResponse<Long> addComment(@RequestBody @Valid CommentAddReq add) {
+    public BaseResponse<AddCommentResp> addComment(@RequestBody @Valid CommentAddReq add) throws IOException {
         UserVO user = UserContext.getUser();
         return ResultUtils.success(commentService.addComment(add, user.getId()));
     }

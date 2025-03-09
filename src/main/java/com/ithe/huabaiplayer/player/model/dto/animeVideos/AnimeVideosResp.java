@@ -59,6 +59,14 @@ public class AnimeVideosResp implements Serializable {
      */
     private String image;
     /**
+     * 该视频总时长
+     */
+    private Integer duration;
+    /**
+     * seek
+     */
+    private Double seek;
+    /**
      * 创建时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
@@ -74,6 +82,7 @@ public class AnimeVideosResp implements Serializable {
                 .crateTime(animeVideos.getCrateTime())
                 .file(animeVideos.getFile())
                 .image(animeVideos.getImage())
+                .duration(animeVideos.getDuration())
                 .build();
     }
 

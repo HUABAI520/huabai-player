@@ -32,6 +32,10 @@ public class AnimeUpdateReq implements Serializable {
     @NotBlank
     private String name;
     /**
+     * 别名
+     */
+    private String another;
+    /**
      * 简介
      */
     private String intro;
@@ -82,6 +86,7 @@ public class AnimeUpdateReq implements Serializable {
         return AnimeIndex.builder()
                 .id(animeUpdateReq.getId())
                 .name(animeUpdateReq.getName())
+                .another(animeUpdateReq.getAnother())
                 .intro(animeUpdateReq.getIntro())
                 .issueTime(animeUpdateReq.getIssueTime())
                 .month(animeUpdateReq.getMonth())

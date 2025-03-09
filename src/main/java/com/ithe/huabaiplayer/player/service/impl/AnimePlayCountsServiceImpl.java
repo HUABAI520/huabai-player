@@ -5,6 +5,7 @@ import com.ithe.huabaiplayer.player.model.entity.AnimePlayCounts;
 import com.ithe.huabaiplayer.player.service.AnimePlayCountsService;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import java.util.Set;
  * @author L
  * @since 2024-10-20
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AnimePlayCountsServiceImpl extends ServiceImpl<AnimePlayCountsMapper, AnimePlayCounts> implements AnimePlayCountsService {
@@ -52,7 +54,19 @@ public class AnimePlayCountsServiceImpl extends ServiceImpl<AnimePlayCountsMappe
             return;
         }
         List<AnimePlayCounts> animePlayCounts = tuples.stream().map(tuple -> {
-            Long animeId = (Long) tuple.getValue();
+            Object value = tuple.getValue();
+            long animeId;
+            if (value instanceof Integer) {
+                animeId = ((Integer) value).longValue();
+            } else if (value instanceof Long) {
+                animeId = (Long) value;
+            } else if (value instanceof String) {
+                animeId = Long.parseLong(value.toString());
+            } else {
+                assert value != null;
+                log.error("Unexpected value type: {}", value.getClass());
+                throw new IllegalStateException("Unexpected value type: " + value.getClass());
+            }
             Double score = tuple.getScore();
             score = score == null ? 0 : score;
             return AnimePlayCounts.builder().animeId(animeId).playCount(score.longValue()).build();

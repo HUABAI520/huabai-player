@@ -39,6 +39,10 @@ public class AnimeIndexVo implements Serializable {
      */
     private String name;
     /**
+     * 别称
+     */
+    private String another;
+    /**
      * 简介
      */
     private String intro;
@@ -112,11 +116,15 @@ public class AnimeIndexVo implements Serializable {
      */
     private BigDecimal userScore;
     private Long ratingId;
+    private Integer seriesId;
+
+    private String seasonTitle;
 
     public static AnimeIndexResp of(AnimeIndexVo animeIndexVo) {
         return AnimeIndexResp.builder()
                 .id(animeIndexVo.getId())
                 .name(animeIndexVo.getName())
+                .another(animeIndexVo.getAnother())
                 .intro(animeIndexVo.getIntro())
                 .issueTime(animeIndexVo.getIssueTime())
                 .month(animeIndexVo.getMonth())
@@ -138,6 +146,8 @@ public class AnimeIndexVo implements Serializable {
                 .seek(animeIndexVo.getSeek())
                 .userScore(animeIndexVo.getUserScore())
                 .ratingId(animeIndexVo.getRatingId())
+                .seriesId(animeIndexVo.getSeriesId())
+                .seasonTitle(animeIndexVo.getSeasonTitle())
                 .build();
     }
 

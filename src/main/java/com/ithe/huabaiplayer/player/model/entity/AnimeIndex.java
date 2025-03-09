@@ -3,18 +3,15 @@ package com.ithe.huabaiplayer.player.model.entity;
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.KeyType;
 import com.mybatisflex.annotation.Table;
-
-import java.io.Serializable;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
-import java.io.Serial;
-import java.util.Date;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.io.Serial;
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.Date;
 
 /**
  * 动漫表 实体类。
@@ -42,6 +39,10 @@ public class AnimeIndex implements Serializable {
      * 动漫名
      */
     private String name;
+    /**
+     * 别称
+     */
+    private String another;
 
     /**
      * 简介
@@ -116,5 +117,10 @@ public class AnimeIndex implements Serializable {
      * 更新时间
      */
     private Date updateTime;
+
+    private Integer seriesId;
+
+    private String seasonTitle;
+
 
 }

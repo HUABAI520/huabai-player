@@ -6,6 +6,7 @@ import com.ithe.huabaiplayer.interaction.model.enums.LikeTypeEnum;
 import com.ithe.huabaiplayer.interaction.service.LikeCountsService;
 import com.ithe.huabaiplayer.interaction.service.LikesService;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
@@ -14,11 +15,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -89,6 +92,8 @@ public class LikeService {
         }
         Integer isLike = score.intValue();
         if (isLike.equals(0) || isLike.equals(-1)) {
+            // 0 表示数据库没有这个用户和这个id 的点赞关系 -1 表示数据库有 但是删除了存储到redis中 后续更新数据库
+            // 1 表示数据库有点赞关系不用更新 2 表示是新的点赞关系 需要更新到数据库中
             isLike = isLike.equals(0) ? 2 : 1;
             redisTemplate.opsForZSet().add(listKey, userId, isLike);
             return true;
@@ -177,6 +182,8 @@ public class LikeService {
         List<Likes> adds = new ArrayList<>();
         List<Likes> des = new ArrayList<>();
         List<LikeCounts> counts = new ArrayList<>();
+        Date date = new Date();
+
         for (String key : keys) {
             Set<ZSetOperations.TypedTuple<Object>> result =
                     redisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
@@ -185,6 +192,7 @@ public class LikeService {
             }
             int count = 0;
             Long thirdId = Long.valueOf(key.substring(prefix.length()));
+
             for (ZSetOperations.TypedTuple<Object> tuple : result) {
                 Object value = tuple.getValue();
                 Long userId;
@@ -206,16 +214,22 @@ public class LikeService {
                     count--;
                     des.add(Likes.builder().thirdId(thirdId).userId(userId).thirdType(LikeTypeEnum.COMMENT.getType()).build());
                 } else if (use == 2) {
-                    adds.add(Likes.builder().thirdId(thirdId).userId(userId).thirdType(LikeTypeEnum.COMMENT.getType()).build());
+                    // 生成一个随机数 0 到 120000
+                    int x = new Random().nextInt(120000);
+                    adds.add(Likes.builder().thirdId(thirdId).userId(userId).thirdType(LikeTypeEnum.COMMENT.getType())
+                            .likeTime(DateUtils.addMilliseconds(date, -x)).build());
                     count++;
                 }
+
             }
+            // 表示点赞数需要更新吗？
             if (count != 0) {
                 counts.add(LikeCounts.builder().thirdId(thirdId).count(count).thirdType(LikeTypeEnum.COMMENT.getType()).build());
             }
+
         }
         if (!adds.isEmpty()) {
-            likesService.saveOrUpdateBatch(adds);
+               likesService.saveOrUpdateBatch(adds);
         }
         if (!des.isEmpty()) {
             likesService.deleteBatchSelective(des);

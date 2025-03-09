@@ -1,6 +1,9 @@
 package com.ithe.huabaiplayer.file.minIo.service;
 
+import com.alibaba.fastjson.JSONObject;
 import com.ithe.huabaiplayer.common.service.RedisService;
+import com.ithe.huabaiplayer.file.minIo.model.MinIoBucket;
+import com.ithe.huabaiplayer.file.minIo.model.MinIoFile;
 import com.ithe.huabaiplayer.file.minIo.model.PreUrl;
 import io.minio.ComposeObjectArgs;
 import io.minio.ComposeSource;
@@ -18,6 +21,7 @@ import io.minio.StatObjectArgs;
 import io.minio.StatObjectResponse;
 import io.minio.errors.MinioException;
 import io.minio.http.Method;
+import io.minio.messages.Bucket;
 import io.minio.messages.DeleteError;
 import io.minio.messages.DeleteObject;
 import io.minio.messages.Item;
@@ -50,10 +54,11 @@ public class MinIoService {
     private RedisService redisService;
 
 
-    public String getBucketPolicy(String bucketName) throws Exception {
-        return minioClient.getBucketPolicy(
+    public JSONObject getBucketPolicy(String bucketName) throws Exception {
+        String bucketPolicy = minioClient.getBucketPolicy(
                 GetBucketPolicyArgs.builder().bucket(bucketName).build()
         );
+        return JSONObject.parseObject(bucketPolicy);
     }
 
     /**
@@ -233,4 +238,40 @@ public class MinIoService {
         return finalFileStat.size();
     }
 
+    public List<MinIoBucket> getBuckList() {
+        try {
+            List<Bucket> buckets = minioClient.listBuckets();
+            return buckets.stream().map(b -> {
+                MinIoBucket minIoBucket = new MinIoBucket();
+                minIoBucket.setBucketName(b.name());
+                return minIoBucket;
+            }).toList();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public List<MinIoFile> listFiles(String bucketName, String folderName) {
+
+        Iterable<Result<Item>> results = minioClient.listObjects(ListObjectsArgs.builder()
+                .bucket(bucketName)
+                .prefix(folderName)
+                .build());
+        List<MinIoFile> minIoFiles = new ArrayList<>();
+        for (Result<Item> result : results) {
+            try {
+                MinIoFile minIoFile = new MinIoFile();
+                Item item = result.get();
+                String s = item.objectName();
+                minIoFile.setFileName(s);
+                boolean b = s.endsWith("/");
+                minIoFile.setFile(b ? 0 : 1);
+                minIoFile.setSize(b ? 0 : item.size());
+                minIoFiles.add(minIoFile);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return minIoFiles;
+    }
 }

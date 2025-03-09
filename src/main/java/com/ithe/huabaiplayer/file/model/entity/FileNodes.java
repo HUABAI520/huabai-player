@@ -4,16 +4,15 @@ import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.KeyType;
 import com.mybatisflex.annotation.Table;
-import java.io.Serializable;
-import java.math.BigInteger;
-import java.time.LocalDateTime;
-
-import java.io.Serial;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.io.Serial;
+import java.io.Serializable;
+import java.math.BigInteger;
+import java.util.Date;
 
 /**
  * 文件夹/文件信息表 实体类。
@@ -72,12 +71,12 @@ public class FileNodes implements Serializable {
     /**
      * 创建时间
      */
-    private LocalDateTime createdAt;
+    private Date createdAt;
 
     /**
      * 更新时间
      */
-    private LocalDateTime updatedAt;
+    private Date updatedAt;
 
     /**
      * 逻辑删除标记，1表示已删除，0表示未删除

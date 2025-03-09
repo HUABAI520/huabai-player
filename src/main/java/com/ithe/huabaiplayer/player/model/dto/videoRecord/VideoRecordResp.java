@@ -64,4 +64,6 @@ public class VideoRecordResp implements Serializable {
 
     private Long id;
 
+    private Integer duration;
+
 }

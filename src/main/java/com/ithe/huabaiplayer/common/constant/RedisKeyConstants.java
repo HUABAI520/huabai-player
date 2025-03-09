@@ -25,4 +25,11 @@ public interface RedisKeyConstants {
     String DONGMAN_INDEX = "dongman.index_";
     String MINIO_PREFIX = "minio:presignedUrl:";
 
+    /**
+     * 邮箱
+     */
+    String REGISTRATION_CODE_PREFIX = "registration:code:";
+    String LOGIN_CODE_PREFIX = "login:code:";
+    String RESET_PASSWORD_CODE_PREFIX = "reset:password:code:";
+
 }

@@ -1,8 +1,11 @@
 package com.ithe.huabaiplayer.file.minIo.controller;
 
+import com.alibaba.fastjson.JSONObject;
 import com.ithe.huabaiplayer.common.BaseResponse;
 import com.ithe.huabaiplayer.common.ResultUtils;
 import com.ithe.huabaiplayer.common.annotation.AuthCheck;
+import com.ithe.huabaiplayer.file.minIo.model.MinIoBucket;
+import com.ithe.huabaiplayer.file.minIo.model.MinIoFile;
 import com.ithe.huabaiplayer.file.minIo.service.MinIoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 
 import static com.ithe.huabaiplayer.common.constant.UserConstant.ADMIN_ROLE;
 
@@ -46,7 +50,7 @@ public class MinIoController {
 
     @GetMapping("/miniIo/policy")
     @AuthCheck(mustRole = ADMIN_ROLE)
-    public BaseResponse<String> getBucketPolicy(String bucketName) throws Exception {
+    public BaseResponse<JSONObject> getBucketPolicy(String bucketName) throws Exception {
         return ResultUtils.success(minIoService.getBucketPolicy(bucketName));
     }
 
@@ -100,5 +104,16 @@ public class MinIoController {
             throws Exception {
         minIoService.deleteFolderFiles(bucketName, folderName);
         return "文件夹下的所有文件已删除：" + folderName;
+    }
+
+    @GetMapping("/listBucket")
+    @AuthCheck(mustRole = ADMIN_ROLE)
+    public BaseResponse<List<MinIoBucket>> getBuckList() {
+        return ResultUtils.success(minIoService.getBuckList());
+    }
+
+    @GetMapping("listFile")
+    public BaseResponse<List<MinIoFile>> listFiles(String bucketName, String folderName) {
+        return ResultUtils.success(minIoService.listFiles(bucketName, folderName));
     }
 }

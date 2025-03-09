@@ -1,16 +1,21 @@
 package com.ithe.huabaiplayer.interaction.service.impl;
 
+import com.ithe.huabaiplayer.common.ErrorCode;
+import com.ithe.huabaiplayer.common.exception.BusinessException;
 import com.ithe.huabaiplayer.common.utils.SqlUtils;
 import com.ithe.huabaiplayer.common.utils.UserContext;
 import com.ithe.huabaiplayer.file.factory.FileFactory;
 import com.ithe.huabaiplayer.file.service.FileStorage;
 import com.ithe.huabaiplayer.interaction.mapper.CommentMapper;
 import com.ithe.huabaiplayer.interaction.model.dto.req.CommentAddReq;
+import com.ithe.huabaiplayer.interaction.model.dto.resp.AddCommentResp;
 import com.ithe.huabaiplayer.interaction.model.dto.resp.CommentResp;
 import com.ithe.huabaiplayer.interaction.model.entity.Comment;
 import com.ithe.huabaiplayer.interaction.model.entity.LikeCounts;
 import com.ithe.huabaiplayer.interaction.model.enums.LikeTypeEnum;
+import com.ithe.huabaiplayer.interaction.model.okHttp.analyze.AnalyzeResponse;
 import com.ithe.huabaiplayer.interaction.service.CommentService;
+import com.ithe.huabaiplayer.interaction.service.SensitiveService;
 import com.ithe.huabaiplayer.interaction.service.handler.LikeService;
 import com.ithe.huabaiplayer.user.model.vo.UserVO;
 import com.mybatisflex.core.paginate.Page;
@@ -23,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StopWatch;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,6 +51,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
     private final LikeService likeService;
     private final FileFactory fileFactory;
+    private final SensitiveService analysisService;
 
     private FileStorage fileService() {
         return fileFactory.getFileService();
@@ -115,13 +122,23 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Long addComment(CommentAddReq add, Long userId) {
+    public AddCommentResp addComment(CommentAddReq add, Long userId) throws IOException {
         Long parentId = add.getParentId();
         Long originId = add.getOriginId();
+        String content = add.getContent();
+        // 调用python服务 校验评论内容
+        AnalyzeResponse analyzeResponse = analysisService.analyzeText(content);
+        log.info("评论内容:{}", analyzeResponse);
+        log.info("评论评分：{}", analyzeResponse.getSentimentScore());
+        log.info("审核耗时：{}", analyzeResponse.getElapsedTimeMs());
+        if (!analyzeResponse.isAllowed()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, analyzeResponse.getMessage());
+        }
+
         Comment comment = Comment.builder()
                 .parentId(parentId)
                 .originId(originId)
-                .content(add.getContent())
+                .content(content)
                 .animeId(add.getAnimeId())
                 .videoId(add.getVideoId())
                 .userId(userId)
@@ -135,7 +152,8 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
         }
         this.save(comment);
-        return comment.getId();
+        return AddCommentResp.builder().id(comment.getId())
+                .sentimentScore(analyzeResponse.getSentimentScore()).build();
     }
 
     @Override

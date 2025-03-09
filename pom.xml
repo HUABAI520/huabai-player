@@ -147,26 +147,30 @@
             <artifactId>minio</artifactId>
             <version>8.5.2</version> <!-- 确保使用最新版本 -->
         </dependency>
-<!--        ES-->
+        <!--        ES-->
         <dependency>
             <groupId>org.elasticsearch.client</groupId>
             <artifactId>elasticsearch-rest-high-level-client</artifactId>
             <version>7.17.4</version>
         </dependency>
-<!--     raMq-->
+        <!--     raMq-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.bouncycastle</groupId>-->
-<!--            <artifactId>bcprov-jdk15to18</artifactId>-->
-<!--            <version>1.76</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.bouncycastle</groupId>-->
+        <!--            <artifactId>bcprov-jdk15to18</artifactId>-->
+        <!--            <version>1.76</version>-->
+        <!--        </dependency>-->
+        <!-- 布隆过滤器-->
+        <!--        <dependency>-->
+        <!--            <groupId>com.google.guava</groupId>-->
+        <!--            <artifactId>guava</artifactId>-->
+        <!--            <version>33.2.1-jre</version>-->
+        <!--        </dependency>-->
 
-
-<!--        ffmpeg-->
-
+        <!--        ffmpeg-->
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>javacv</artifactId>
@@ -177,19 +181,29 @@
             <artifactId>ffmpeg-platform</artifactId>
             <version>4.4-1.5.6</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.bytedeco</groupId>-->
-<!--            <artifactId>ffmpeg</artifactId>-->
-<!--            <version>4.4-1.5.6</version>-->
-<!--            <classifier>windows-x86</classifier>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.bytedeco</groupId>-->
+        <!--            <artifactId>ffmpeg</artifactId>-->
+        <!--            <version>4.4-1.5.6</version>-->
+        <!--            <classifier>windows-x86</classifier>-->
+        <!--        </dependency>-->
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>javacpp</artifactId>
             <version>1.5.6</version>
             <classifier>windows-x86</classifier>
         </dependency>
-
+        <!--qq邮箱发送短信服务-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <!-- OkHttp -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -198,18 +212,18 @@
                 <groupId>org.graalvm.buildtools</groupId>
                 <artifactId>native-maven-plugin</artifactId>
             </plugin>
-                        <plugin>
-                            <groupId>org.springframework.boot</groupId>
-                            <artifactId>spring-boot-maven-plugin</artifactId>
-                            <configuration>
-                                <excludes>
-                                    <exclude>
-                                        <groupId>org.projectlombok</groupId>
-                                        <artifactId>lombok</artifactId>
-                                    </exclude>
-                                </excludes>
-                            </configuration>
-                        </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

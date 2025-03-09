@@ -35,4 +35,8 @@ public interface AnimeIndexService extends IService<AnimeIndex> {
     String uploadVideoPicture(Long animeId, Long videoId, MultipartFile multipartFile,Long fileId);
 
     List<AnimeIndexResp> list(String name);
+
+    List<AnimeIndexResp> listByIds(List<Long> ids);
+
+    List<AnimeIndexResp> listBySeriesId(Integer sId);
 }

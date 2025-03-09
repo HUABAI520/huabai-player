@@ -64,4 +64,9 @@ public class AnimeVideos implements Serializable {
      */
     private String image;
 
+    /**
+     * 该视频总时长
+     */
+    private Integer duration;
+
 }

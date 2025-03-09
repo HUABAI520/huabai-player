@@ -14,7 +14,7 @@
                  LEFT JOIN
              hua_type t ON ht.type_id = t.id
                  LEFT JOIN
-             video_record v ON ai.id = v.anime_id and v.user_id = #{userId}
+             video_record_latest v ON ai.id = v.anime_id and v.user_id = #{userId}
                 LEFT JOIN
              user_rating u ON ai.id = u.anime_id and u.user_id = #{userId}
         WHERE ai.id = #{id}

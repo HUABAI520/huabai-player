@@ -223,10 +223,10 @@ public class MinIoFileService implements FileStorage {
 
     @Override
     public boolean createAnimeFolder(String savePath) {
-        boolean b = minIoService.hasFolder(BucketEnum.HUA_VIDEO.getBucketName(), savePath);
-        if (b) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "该目录已存在~");
-        }
+//        boolean b = minIoService.hasFolder(BucketEnum.HUA_VIDEO.getBucketName(), savePath);
+//        if (b) {
+//            throw new BusinessException(ErrorCode.PARAMS_ERROR, "该目录已存在~");
+//        }
         try {
             minIoService.createFolder(BucketEnum.HUA_VIDEO.getBucketName(), savePath);
         } catch (Exception e) {

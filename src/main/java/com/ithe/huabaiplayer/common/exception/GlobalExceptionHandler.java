@@ -9,11 +9,13 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.io.IOException;
+
 /**
  * 全局异常处理器
  *
  * @author <a href="https://github.com/lihz">ithe,itz</a>
- * @from 
+ * @from
  */
 @RestControllerAdvice
 @Slf4j
@@ -27,6 +29,7 @@ public class GlobalExceptionHandler {
 
     /**
      * 拦截参数校验异常
+     *
      * @param e
      * @return
      */
@@ -39,9 +42,16 @@ public class GlobalExceptionHandler {
         String substring = string.substring(0, string.length() - 1);
         return ResultUtils.error(ErrorCode.PARAMS_ERROR.getCode(), substring);
     }
+
     @ExceptionHandler(RuntimeException.class)
     public BaseResponse<?> runtimeExceptionHandler(RuntimeException e) {
         log.error("RuntimeException", e);
+        return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "系统错误");
+    }
+
+    @ExceptionHandler(IOException.class)
+    public BaseResponse<?> iOExceptionHandler(RuntimeException e) {
+        log.error("IOException", e);
         return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "系统错误");
     }
 }

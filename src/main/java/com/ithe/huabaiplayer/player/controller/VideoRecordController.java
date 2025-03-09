@@ -46,13 +46,14 @@ public class VideoRecordController {
         return ResultUtils.success(videoService.listRecord(videoRecordQueryReq, user.getId()));
     }
 
+    // 删除就删最新观看记录的表 全部记录就不删除
     @DeleteMapping("/{id}")
     @AuthCheck
     public BaseResponse<Boolean> deleteRecordById(@PathVariable("id") Long id) {
         UserVO user = UserContext.getUser();
         return ResultUtils.success(videoService.deleteRecord(id, user.getId()));
     }
-
+    // 删除就删最新观看记录的表 全部记录就不删除
     @DeleteMapping("/all")
     @AuthCheck
     public BaseResponse<Boolean> deleteRecordAll() {

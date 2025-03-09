@@ -57,6 +57,7 @@ public class HuaUtils {
         long fileSize = multipartFile.getSize();
         // 文件后缀
         String fileSuffix = FileUtil.getSuffix(multipartFile.getOriginalFilename());
+        // 如果后缀为空 获取文件类型
         final long oNEM = 1024 * 1024 * 10L;
 
         if (fileSize > oNEM) {

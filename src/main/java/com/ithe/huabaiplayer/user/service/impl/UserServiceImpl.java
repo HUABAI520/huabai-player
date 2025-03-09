@@ -6,11 +6,16 @@ import com.ithe.huabaiplayer.common.ErrorCode;
 import com.ithe.huabaiplayer.common.constant.RedisKeyConstants;
 import com.ithe.huabaiplayer.common.constant.UserConstant;
 import com.ithe.huabaiplayer.common.exception.BusinessException;
+import com.ithe.huabaiplayer.common.model.enums.EmailEnums;
 import com.ithe.huabaiplayer.common.model.enums.UserRoleEnum;
+import com.ithe.huabaiplayer.common.service.MailService;
 import com.ithe.huabaiplayer.common.utils.HuaUtils;
+import com.ithe.huabaiplayer.common.utils.VerificationCodeUtil;
 import com.ithe.huabaiplayer.file.factory.FileFactory;
 import com.ithe.huabaiplayer.file.service.FileStorage;
+import com.ithe.huabaiplayer.interaction.service.CollectionsService;
 import com.ithe.huabaiplayer.user.mapper.UserMapper;
+import com.ithe.huabaiplayer.user.model.dto.user.UpdatePasswordRequest;
 import com.ithe.huabaiplayer.user.model.dto.user.UserRegisterRequest;
 import com.ithe.huabaiplayer.user.model.entity.User;
 import com.ithe.huabaiplayer.user.model.vo.UserVO;
@@ -21,6 +26,7 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -55,7 +61,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     private RedisTemplate<String, Object> redisTemplate;
     @Resource
     private FileFactory fileFactory;
-
+    @Resource
+    private MailService mailService;
+    @Resource
+    private CollectionsService collectionsService;
 
     private FileStorage fileService() {
         return fileFactory.getFileService();
@@ -73,13 +82,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         String userPassword = userRegisterRequest.getUserPassword();
         String checkPassword = userRegisterRequest.getCheckPassword();
         String username = userRegisterRequest.getUsername();
-
+        String email = userRegisterRequest.getEmail();
+        String code = userRegisterRequest.getCode();
         // 不能包含特殊符号的正则表达式
         String regex = "^[a-zA-Z0-9_]+$";
         // 1.校验
-        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
+        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, email, code)) {
             //
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请填写完全~");
         }
         if (userAccount.length() < 4) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号过短");
@@ -95,9 +105,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (!userPassword.equals(checkPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
         }
+        // 验证验证码
+        if (!checkRegisterCode(email, code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误");
+        }
         synchronized (userAccount.intern()) {
             QueryWrapper queryWrapper = new QueryWrapper();
             queryWrapper.eq(User::getUserAccount, userAccount);
+
             boolean exists = this.exists(queryWrapper);
             if (exists) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号重复");
@@ -114,11 +129,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             user.setUserAccount(userAccount);
             user.setUserPassword(encryptPassword);
             user.setUsername(username);
+            user.setEmail(email);
             boolean saveResult = this.save(user);
             if (!saveResult) {
                 throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败，数据库错误");
             }
-            return user.getId();
+            Long userId = user.getId();
+            // 注册成功了 然后添加默认收藏夹 todo 后续考虑使用mq发送消息进行添加
+            collectionsService.addDefaultCollections(userId);
+            return userId;
         }
     }
 
@@ -150,6 +169,28 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             log.info("user login failed, userAccount:{}", userAccount);
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
         }
+        return getUserVO(request, user);
+    }
+
+    @Override
+    public UserVO userLoginByEmail(String email, String code, HttpServletRequest request) {
+        if (StringUtils.isAnyBlank(email, code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请输入");
+        }
+        if (checkLoginCode(email, code)) {
+            QueryWrapper queryWrapper = new QueryWrapper();
+            queryWrapper.eq(User::getEmail, email);
+            User user = this.getOne(queryWrapper);
+            if (user == null) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在");
+            }
+            return getUserVO(request, user);
+        }
+        return null;
+    }
+
+    @NotNull
+    private UserVO getUserVO(HttpServletRequest request, User user) {
         // 判断用户是否被禁用
         if (user.getUserRole().equals(UserRoleEnum.BAN.getValue()) || user.getUserStatus() == 1) {
             log.info("user login failed, userAccount is disabled");
@@ -234,7 +275,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (userVO.getUserStatus() == 1) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "用户已被禁用");
         }
-
         // 更新对应的userVO对象时间
         redisTemplate.opsForValue().set(RedisKeyConstants.USER_VO + userVOId, userVO, 1, TimeUnit.HOURS);
         // 返回userVO对象
@@ -281,10 +321,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在");
             }
             // 更新用户信息
-            User user = new User();
-            BeanUtils.copyProperties(userVO, user);
-            boolean b = this.updateById(user);
-            redisTemplate.opsForValue().set(RedisKeyConstants.USER_VO + userId, this.getUserVO(this.getById(userId)), 1, TimeUnit.HOURS);
+            BeanUtils.copyProperties(userVO, byId);
+            boolean b = this.updateById(byId);
+            User user = this.getById(userId);
+            UserVO userVO1 = this.getUserVO(user);
+            String avatar = userVO1.getUserAvatar();
+            if (StringUtils.isNotBlank(avatar)) {
+                userVO1.setUserAvatar(fileService().getAvatarUrl(avatar));
+            }
+            redisTemplate.opsForValue().set(RedisKeyConstants.USER_VO + userId, userVO1, 1, TimeUnit.HOURS);
             return b;
         } else {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
@@ -398,7 +443,127 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return url;
     }
 
+    @Override
+    public Boolean sendRegistrationEmail(String to) {
+        if (StringUtils.isBlank(to)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "邮箱不能为空");
+        }
+        // 查看邮箱是否已经被注册
+        if (queryChain().eq(User::getEmail, to).exists()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "邮箱已被注册");
+        }
+        try {
+            String codeGen = VerificationCodeUtil.generateVerificationCode();
+            mailService.sendHtmlMailMessage(to, EmailEnums.REGISTER.getSubject(),
+                    EmailEnums.REGISTER.getTemplate().replace("${code}", codeGen));
+            redisTemplate.opsForValue().set(RedisKeyConstants.REGISTRATION_CODE_PREFIX + to, codeGen, 5, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "邮件发送失败,请重试~");
+        }
+        return true;
+    }
 
+    @Override
+    public Boolean sendLoginEmail(String to) {
+        if (StringUtils.isBlank(to)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "邮箱不能为空");
+        }
+        // 查看邮箱是否存在
+        if (!queryChain().eq(User::getEmail, to).exists()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "邮箱不存在，请注册~");
+        }
+        try {
+            String codeGen = VerificationCodeUtil.generateVerificationCode();
+            mailService.sendHtmlMailMessage(to, EmailEnums.LOGIN.getSubject(),
+                    EmailEnums.LOGIN.getTemplate().replace("${code}", codeGen));
+            redisTemplate.opsForValue().set(RedisKeyConstants.LOGIN_CODE_PREFIX + to, codeGen, 5, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "邮件发送失败,请重试~");
+        }
+        return true;
+    }
+
+    @Override
+    public Boolean sendUpdateEmail(String email) {
+        if (StringUtils.isBlank(email)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "邮箱不能为空");
+        }
+        // 查看邮箱是否存在
+        if (!queryChain().eq(User::getEmail, email).exists()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "邮箱不存在，请注册~");
+        }
+        try {
+            String codeGen = VerificationCodeUtil.generateVerificationCode();
+            mailService.sendHtmlMailMessage(email, EmailEnums.RESET_PASSWORD.getSubject(),
+                    EmailEnums.RESET_PASSWORD.getTemplate().replace("${code}", codeGen));
+            redisTemplate.opsForValue().set(RedisKeyConstants.RESET_PASSWORD_CODE_PREFIX + email, codeGen, 5, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "邮件发送失败,请重试~");
+        }
+        return true;
+    }
+
+    @Override
+    public Boolean updatePassword(UpdatePasswordRequest updatePasswordRequest) {
+        String userPassword = updatePasswordRequest.getUserPassword();
+        String checkPassword = updatePasswordRequest.getCheckPassword();
+        String email = updatePasswordRequest.getEmail();
+        String code = updatePasswordRequest.getCode();
+        if (StringUtils.isAnyBlank(userPassword, checkPassword, email, code)) {
+            //
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请填写完全~");
+        }
+        if (!userPassword.equals(checkPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次密码不一致");
+        }
+        if (checkUpdateCode(email, code)) {
+            String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
+            updateChain().set(User::getUserPassword, encryptPassword)
+                    .eq(User::getEmail, email).update();
+            return true;
+        }
+        return false;
+    }
+
+    // 校验注册验证码
+    private boolean checkRegisterCode(String to, String code) {
+        String redisCode = (String) redisTemplate.opsForValue().get(RedisKeyConstants.REGISTRATION_CODE_PREFIX + to);
+        if (StringUtils.isBlank(redisCode)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码已过期");
+        }
+        if (!redisCode.equals(code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误");
+        }
+        // 删除redis
+        redisTemplate.delete(RedisKeyConstants.REGISTRATION_CODE_PREFIX + to);
+        return true;
+    }
+
+    // 校验登录验证码
+    private boolean checkLoginCode(String to, String code) {
+        String redisCode = (String) redisTemplate.opsForValue().get(RedisKeyConstants.LOGIN_CODE_PREFIX + to);
+        if (StringUtils.isBlank(redisCode)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码已过期");
+        }
+        if (!redisCode.equals(code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误");
+        }
+        redisTemplate.delete(RedisKeyConstants.LOGIN_CODE_PREFIX + to);
+        return true;
+    }
+
+    // 校验修改密码验证码
+    private boolean checkUpdateCode(String to, String code) {
+        String redisCode = (String) redisTemplate.opsForValue().get(RedisKeyConstants.RESET_PASSWORD_CODE_PREFIX + to);
+        if (StringUtils.isBlank(redisCode)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码已过期");
+        }
+        if (!redisCode.equals(code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误");
+        }
+        redisTemplate.delete(RedisKeyConstants.RESET_PASSWORD_CODE_PREFIX + to);
+        return true;
+    }
 }
 
 

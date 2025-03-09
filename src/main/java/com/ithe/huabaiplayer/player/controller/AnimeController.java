@@ -17,6 +17,7 @@ import com.mybatisflex.core.paginate.Page;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -50,10 +51,10 @@ public class AnimeController {
 
 
     // 新增动漫
-    @PostMapping("/addAPicture")
-    @AuthCheck(mustRole = ADMIN_ROLE)
+    @PostMapping(path = "/addAPicture", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    @AuthCheck(mustRole = ADMIN_ROLE)
     public BaseResponse<Long> addAnimeAndPicture(@RequestPart("file") MultipartFile multipartFile,
-                                                 @RequestBody @Valid AnimeAddReq animeAddReq
+                                                 @Valid @RequestPart("animeAddReq") AnimeAddReq animeAddReq
     ) {
         return ResultUtils.success(animeIndexService.add(animeAddReq, multipartFile));
     }
@@ -77,7 +78,8 @@ public class AnimeController {
 //    @AuthCheck(mustRole = ADMIN_ROLE)
     @AuthCheck
     public BaseResponse<AnimeVideosResp> get(Long videoId) {
-        return ResultUtils.success(videoService.get(videoId));
+        UserVO user = UserContext.getUser();
+        return ResultUtils.success(videoService.get(videoId,user.getId()));
     }
 
     // 上传视频分片
@@ -88,9 +90,9 @@ public class AnimeController {
             String fileSuffix,
             @PathVariable("fileName") String fileName,
             @PathVariable("partNumber") Integer partNumber,
-            @PathVariable("total") Integer total) {
+            @PathVariable("total") Integer total,Integer duration) {
         return ResultUtils.success(videoService.uploadVideo(
-                multipartFile, animeId, videoId, fileSuffix, fileName, partNumber, total));
+                multipartFile, animeId, videoId, fileSuffix, fileName, partNumber, total,duration));
 //        return ResultUtils.success(s3MultipartUploadService.uploadVideo(
 //                multipartFile, animeId, videoId, fileSuffix, fileName, partNumber, total));
     }

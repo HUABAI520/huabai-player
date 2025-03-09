@@ -2,6 +2,7 @@ package com.ithe.huabaiplayer.player.model.dto.anime;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ithe.huabaiplayer.player.model.dto.animeVideos.AnimeVideosResp;
+import com.ithe.huabaiplayer.player.model.vo.Seriess;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -35,6 +36,10 @@ public class AnimeIndexResp implements Serializable {
      * 动漫名
      */
     private String name;
+    /**
+     * 别称
+     */
+    private String another;
     /**
      * 简介
      */
@@ -120,4 +125,11 @@ public class AnimeIndexResp implements Serializable {
      * 该动漫的播放量
      */
     private Long playCount;
+
+    private List<Seriess> series;
+    private String seasonTitle;
+
+    private Integer seriesId;
+
+    private Integer isCollect;
 }

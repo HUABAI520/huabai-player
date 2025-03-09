@@ -69,12 +69,12 @@ public class codeTests {
 
         //设置根包
         globalConfig.getPackageConfig()
-                .setBasePackage("com.ithe.huabaiplayer.player");
+                .setBasePackage("com.ithe.huabaiplayer.interaction");
 
         //设置表前缀和只生成哪些表，setGenerateTable 未配置时，生成所有表
         globalConfig.getStrategyConfig()
                 .setTablePrefix("")
-        .setGenerateTable("anime_play_counts");
+                .setGenerateTable("content_report_record","content_report_summary");
 
         //设置生成 entity 并启用 Lombok
         globalConfig.enableEntity()

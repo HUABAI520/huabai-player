@@ -10,6 +10,7 @@ import com.ithe.huabaiplayer.common.constant.OperationType;
 import com.ithe.huabaiplayer.common.constant.UserConstant;
 import com.ithe.huabaiplayer.common.exception.BusinessException;
 import com.ithe.huabaiplayer.common.utils.UserContext;
+import com.ithe.huabaiplayer.user.model.dto.user.UpdatePasswordRequest;
 import com.ithe.huabaiplayer.user.model.dto.user.UserLoginRequest;
 import com.ithe.huabaiplayer.user.model.dto.user.UserRegisterRequest;
 import com.ithe.huabaiplayer.user.model.result.LoginResult;
@@ -21,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -39,6 +41,7 @@ import static com.ithe.huabaiplayer.common.utils.HuaUtils.hasNonEmptyFields;
 public class UserController {
     @Resource
     private UserService userService;
+
 
     @PostMapping("/register")
     public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
@@ -62,6 +65,18 @@ public class UserController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
         UserVO userVO = userService.userLogin(userAccount, userPassword, request);
+        if (userVO == null) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "登录失败！");
+        }
+        LoginResult loginResult = new LoginResult();
+        loginResult.setStatus("ok");
+        return ResultUtils.success(loginResult);
+    }
+
+    // 通过邮箱登录
+    @PostMapping("/login/email")
+    public BaseResponse<LoginResult> loginMail(String email, String code, HttpServletRequest request) {
+        UserVO userVO = userService.userLoginByEmail(email, code, request);
         if (userVO == null) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "登录失败！");
         }
@@ -130,5 +145,32 @@ public class UserController {
     public BaseResponse<String> uploadFile(@RequestPart("file") MultipartFile multipartFile) {
         UserVO user = UserContext.getUser();
         return ResultUtils.success(userService.uploadFile(multipartFile, user));
+    }
+
+    // 修改密码接口
+    @PutMapping("/update/password")
+    public BaseResponse<Boolean> updatePassword(@RequestBody UpdatePasswordRequest updatePasswordRequest) {
+        if (updatePasswordRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+        return ResultUtils.success(userService.updatePassword(updatePasswordRequest));
+    }
+
+    // 获取注册验证码
+    @GetMapping("/register/email")
+    public BaseResponse<Boolean> registerMail(String email) {
+        return ResultUtils.success(userService.sendRegistrationEmail(email));
+    }
+
+    // 获取登录验证码
+    @GetMapping("/login/email")
+    public BaseResponse<Boolean> loginMail(String email) {
+        return ResultUtils.success(userService.sendLoginEmail(email));
+    }
+
+    // 获取修改验证码
+    @GetMapping("/update/email")
+    public BaseResponse<Boolean> updateMail(String email) {
+        return ResultUtils.success(userService.sendUpdateEmail(email));
     }
 }

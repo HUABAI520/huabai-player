@@ -1,9 +1,7 @@
 package com.ithe.huabaiplayer.player.model.dto.anime;
 
 
-import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.alibaba.fastjson.JSON;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ithe.huabaiplayer.player.model.entity.AnimeIndex;
 import jakarta.validation.constraints.NotBlank;
@@ -12,7 +10,7 @@ import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -31,6 +29,10 @@ public class AnimeAddReq implements Serializable {
     @NotBlank
     @NotNull
     private String name;
+    /**
+     * 别称
+     */
+    private String another;
     /**
      * 简介
      */
@@ -80,10 +82,21 @@ public class AnimeAddReq implements Serializable {
 
     private List<Integer> kindIds;
 
+    /**
+     * 评分 一位小数
+     */
+    private BigDecimal score;
+
+    /**
+     * 评分次数
+     */
+    private Integer number;
+
     public static AnimeIndex toAnimeIndex(AnimeAddReq animeAddReq) {
         String roles = JSONUtil.toJsonStr(animeAddReq.getActRole());
         return AnimeIndex.builder()
                 .name(animeAddReq.getName())
+                .another(animeAddReq.getAnother())
                 .intro(animeAddReq.getIntro())
                 .issueTime(animeAddReq.getIssueTime())
                 .month(animeAddReq.getMonth())
@@ -93,6 +106,8 @@ public class AnimeAddReq implements Serializable {
                 .director(animeAddReq.getDirector())
                 .language(animeAddReq.getLanguage())
                 .type(animeAddReq.getType())
+                .score(animeAddReq.getScore())
+                .number(animeAddReq.getNumber())
                 .build();
     }
 }

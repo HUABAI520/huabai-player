@@ -17,13 +17,16 @@ import com.ithe.huabaiplayer.player.model.dto.videoRecord.VideoRecordResp;
 import com.ithe.huabaiplayer.player.model.entity.AnimeIndex;
 import com.ithe.huabaiplayer.player.model.entity.AnimeVideos;
 import com.ithe.huabaiplayer.player.model.entity.VideoRecord;
+import com.ithe.huabaiplayer.player.model.entity.VideoRecordLatest;
 import com.ithe.huabaiplayer.player.model.prefix.PictureProperties;
 import com.ithe.huabaiplayer.player.model.prefix.PlayerProperties;
 import com.ithe.huabaiplayer.player.service.AnimeIndexService;
 import com.ithe.huabaiplayer.player.service.AnimeVideosService;
+import com.ithe.huabaiplayer.player.service.VideoRecordLatestService;
 import com.ithe.huabaiplayer.player.service.VideoRecordService;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
+import com.mybatisflex.core.update.UpdateChain;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -41,6 +44,7 @@ import static com.ithe.huabaiplayer.file.model.entity.table.FileNodesTableDef.FI
 import static com.ithe.huabaiplayer.file.model.enums.FileTypeEnum.FILE;
 import static com.ithe.huabaiplayer.player.model.entity.table.AnimeIndexTableDef.ANIME_INDEX;
 import static com.ithe.huabaiplayer.player.model.entity.table.AnimeVideosTableDef.ANIME_VIDEOS;
+import static com.ithe.huabaiplayer.player.model.entity.table.VideoRecordLatestTableDef.VIDEO_RECORD_LATEST;
 import static com.ithe.huabaiplayer.player.model.entity.table.VideoRecordTableDef.VIDEO_RECORD;
 
 
@@ -59,6 +63,7 @@ public class VideoService {
     private final RedisService redisService;
     private final PictureProperties pictureProperties;
     private final VideoRecordService videoRecordService;
+    private final VideoRecordLatestService videoRecordLatestService;
     private final FileFactory fileFactory;
 
     private FileStorage fileService() {
@@ -79,11 +84,12 @@ public class VideoService {
         return animeVideosService.save(a) ? a.getId() : null;
     }
 
-    public AnimeVideosResp get(Long videoId) {
+    public AnimeVideosResp get(Long videoId, Long userId) {
         AnimeVideosResp one = animeVideosService.getOneAs(new QueryWrapper()
-                .select(ANIME_VIDEOS.ALL_COLUMNS, FILE_NODES.ID, FILE_NODES.FULL_PATH.as("fileUrl"))
+                .select(ANIME_VIDEOS.ALL_COLUMNS, FILE_NODES.ID, FILE_NODES.FULL_PATH.as("fileUrl"), VIDEO_RECORD.SEEK)
                 .from(ANIME_VIDEOS)
                 .leftJoin(FILE_NODES).on(ANIME_VIDEOS.FILE.eq(FILE_NODES.ID))
+                .leftJoin(VIDEO_RECORD).on(VIDEO_RECORD.VIDEO_ID.eq(ANIME_VIDEOS.ID).and(VIDEO_RECORD.USER_ID.eq(userId)))
                 .where(queryWrapper -> {
                     queryWrapper.eq(AnimeVideos::getId, videoId);
                 }), AnimeVideosResp.class);
@@ -120,7 +126,7 @@ public class VideoService {
     @Transactional(rollbackFor = Exception.class)
     public Integer uploadVideo(MultipartFile file, Long animeId,
                                Long videoId, String fileSuffix, String fileName,
-                               Integer partNumber, Integer total) {
+                               Integer partNumber, Integer total, Integer duration) {
         FileNodes fullNode = getFullPath(animeId);
         String fullPath = fullNode.getFullPath();
         // 通常自己不会遇到这个上传了视频前端还能上传
@@ -140,6 +146,12 @@ public class VideoService {
             return x;
         }
         mergeVideo(animeId, fullNode, fileName, fileSuffix, videoId);
+        // 合并成功后更新动漫视频时长
+        if (duration != null && duration > 0) {
+            animeVideosService.updateChain()
+                    .eq(AnimeVideos::getId, videoId)
+                    .set(AnimeVideos::getDuration, duration).update();
+        }
         return partNumber;
     }
 
@@ -238,18 +250,37 @@ public class VideoService {
         return fileService().deleteVideoFile(fullPath);
     }
 
+    /**
+     * 之前是查看动漫id是否存在进行更新/新增 现在改为根据动漫id+视频id进行更新/新增
+     */
     public Boolean addRecord(VideoRecordAddReq videoRecordAddReq, Long userId) {
+//        VideoRecord record = BeanHuaUtil.copyIgnoreFields(videoRecordAddReq, VideoRecord.class);
+//        record.setUserId(userId);
+//        Long animeId = videoRecordAddReq.getAnimeId();
+//        VideoRecord one = videoRecordService.getOne(new QueryWrapper().eq(VideoRecord::getAnimeId, animeId)
+//                .eq(VideoRecord::getUserId, userId));
+//        if (one != null) {
+//            return videoRecordService.updateChain()
+//                    .set(VideoRecord::getSeek, videoRecordAddReq.getSeek())
+//                    .set(VideoRecord::getVideoId, videoRecordAddReq.getVideoId())
+//                    .eq(VideoRecord::getUserId, userId)
+//                    .eq(VideoRecord::getAnimeId, animeId).update();
+//        } else {
+//            return videoRecordService.save(record);
+//        }
         VideoRecord record = BeanHuaUtil.copyIgnoreFields(videoRecordAddReq, VideoRecord.class);
         record.setUserId(userId);
         Long animeId = videoRecordAddReq.getAnimeId();
+        Long videoId = videoRecordAddReq.getVideoId();
         VideoRecord one = videoRecordService.getOne(new QueryWrapper().eq(VideoRecord::getAnimeId, animeId)
-                .eq(VideoRecord::getUserId, userId));
+                .eq(VideoRecord::getUserId, userId).eq(VideoRecord::getVideoId, videoId));
         if (one != null) {
             return videoRecordService.updateChain()
                     .set(VideoRecord::getSeek, videoRecordAddReq.getSeek())
-                    .set(VideoRecord::getVideoId, videoRecordAddReq.getVideoId())
                     .eq(VideoRecord::getUserId, userId)
-                    .eq(VideoRecord::getAnimeId, animeId).update();
+                    .eq(VideoRecord::getAnimeId, animeId)
+                    .eq(VideoRecord::getVideoId, videoId)
+                    .update();
         } else {
             return videoRecordService.save(record);
         }
@@ -258,7 +289,8 @@ public class VideoService {
     public Page<VideoRecordResp> listRecord(VideoRecordQueryReq videoRecordQueryReq, Long userId) {
         long current = videoRecordQueryReq.getCurrent();
         long pageSize = videoRecordQueryReq.getPageSize();
-        Page<VideoRecordResp> page = videoRecordService.pageAs(new Page<>(current, pageSize),
+
+        Page<VideoRecordResp> page = videoRecordLatestService.pageAs(new Page<>(current, pageSize),
                 getQueryWrapper(videoRecordQueryReq, userId), VideoRecordResp.class);
         List<VideoRecordResp> records = page.getRecords();
         for (VideoRecordResp record : records) {
@@ -271,15 +303,16 @@ public class VideoService {
         return page;
     }
 
+
     public QueryWrapper getQueryWrapper(VideoRecordQueryReq videoRecordQueryReq, Long userId) {
         String key = videoRecordQueryReq.getKey();
         QueryWrapper query = new QueryWrapper()
-                .select(VIDEO_RECORD.ALL_COLUMNS, ANIME_INDEX.NAME, ANIME_VIDEOS.RANK, ANIME_VIDEOS.TITLE, ANIME_VIDEOS.IMAGE)
-                .from(VIDEO_RECORD)
-                .leftJoin(ANIME_INDEX).on(VIDEO_RECORD.ANIME_ID.eq(ANIME_INDEX.ID))
-                .leftJoin(ANIME_VIDEOS).on(VIDEO_RECORD.VIDEO_ID.eq(ANIME_VIDEOS.ID))
-                .where(VIDEO_RECORD.USER_ID.eq(userId))
-                .orderBy(VIDEO_RECORD.UPDATE_TIME.desc());
+                .select(VIDEO_RECORD_LATEST.ALL_COLUMNS, ANIME_INDEX.NAME, ANIME_VIDEOS.RANK, ANIME_VIDEOS.TITLE, ANIME_VIDEOS.IMAGE, ANIME_VIDEOS.DURATION)
+                .from(VIDEO_RECORD_LATEST)
+                .leftJoin(ANIME_INDEX).on(VIDEO_RECORD_LATEST.ANIME_ID.eq(ANIME_INDEX.ID))
+                .leftJoin(ANIME_VIDEOS).on(VIDEO_RECORD_LATEST.VIDEO_ID.eq(ANIME_VIDEOS.ID))
+                .where(VIDEO_RECORD_LATEST.USER_ID.eq(userId))
+                .orderBy(VIDEO_RECORD_LATEST.UPDATE_TIME.desc());
         if (StringUtils.isNotBlank(key)) {
             query.and(q -> {
                 q.like(AnimeVideos::getTitle, key).or(q2 -> {
@@ -292,11 +325,11 @@ public class VideoService {
     }
 
     public Boolean deleteRecord(Long recordId, Long userId) {
-        return videoRecordService.remove(new QueryWrapper().eq(VideoRecord::getId, recordId)
-                .eq(VideoRecord::getUserId, userId));
+        return UpdateChain.of(VideoRecordLatest.class).eq(VideoRecordLatest::getId, recordId).eq(VideoRecordLatest::getUserId, userId).remove();
     }
 
     public Boolean deleteRecord(Long userId) {
-        return videoRecordService.remove(new QueryWrapper().eq(VideoRecord::getUserId, userId));
+        return UpdateChain.of(VideoRecordLatest.class).eq(VideoRecordLatest::getUserId, userId).remove();
+
     }
 }

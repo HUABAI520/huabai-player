@@ -2,6 +2,7 @@ package com.ithe.huabaiplayer.user.service;
 
 
 
+import com.ithe.huabaiplayer.user.model.dto.user.UpdatePasswordRequest;
 import com.ithe.huabaiplayer.user.model.dto.user.UserRegisterRequest;
 import com.ithe.huabaiplayer.user.model.entity.User;
 import com.ithe.huabaiplayer.user.model.vo.UserVO;
@@ -32,6 +33,7 @@ public interface UserService extends IService<User> {
      * @return 脱敏后的用户信息
      */
     UserVO userLogin(String userAccount, String userPassword, HttpServletRequest request);
+    UserVO userLoginByEmail(String email, String code, HttpServletRequest request);
 
     /**
      * 根据User对象获取UserVO对象
@@ -94,4 +96,12 @@ public interface UserService extends IService<User> {
     Boolean updateUserAdmin(UserVO userVO, HttpServletRequest request);
 
     String uploadFile(MultipartFile multipartFile, UserVO user);
+
+    Boolean sendRegistrationEmail(String to);
+
+    Boolean sendLoginEmail(String to);
+
+    Boolean sendUpdateEmail(String email);
+
+    Boolean updatePassword(UpdatePasswordRequest updatePasswordRequest);
 }
