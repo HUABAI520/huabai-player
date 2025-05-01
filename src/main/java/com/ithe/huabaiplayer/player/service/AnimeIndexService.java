@@ -22,6 +22,8 @@ public interface AnimeIndexService extends IService<AnimeIndex> {
 
     Long add(AnimeAddReq animeAddReq, MultipartFile multipartFile);
 
+    List<AnimeIndexResp> getAnimeIndexRespByIds(List<Long> animeId);
+
     Page<AnimeIndexResp> findAll(AnimeQueryReq animeQueryReq);
 
     AnimeIndexResp getAnimeById(Long id,Long userId);
@@ -39,4 +41,7 @@ public interface AnimeIndexService extends IService<AnimeIndex> {
     List<AnimeIndexResp> listByIds(List<Long> ids);
 
     List<AnimeIndexResp> listBySeriesId(Integer sId);
+
+    Boolean updateVideoSort(Long animeId, List<Long> videoSortReqs);
+
 }

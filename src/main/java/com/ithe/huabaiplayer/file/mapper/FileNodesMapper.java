@@ -9,6 +9,8 @@ import com.ithe.huabaiplayer.file.model.entity.FileNodes;
  * @author L
  * @since 2024-08-28
  */
-public interface FileNodesMapper extends BaseMapper<FileNodes> {
+public interface
+
+FileNodesMapper extends BaseMapper<FileNodes> {
 
 }

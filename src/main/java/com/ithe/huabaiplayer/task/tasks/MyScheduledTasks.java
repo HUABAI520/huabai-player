@@ -1,5 +1,6 @@
 package com.ithe.huabaiplayer.task.tasks;
 
+import com.ithe.huabaiplayer.features.service.handler.RecommendationHandler;
 import com.ithe.huabaiplayer.interaction.service.handler.LikeService;
 import com.ithe.huabaiplayer.player.service.AnimePlayCountsService;
 import com.ithe.huabaiplayer.task.model.taskNames.TaskConstant;
@@ -21,6 +22,7 @@ public class MyScheduledTasks {
     private final ScheduledTaskService service;
     private final LikeService likeService;
     private final AnimePlayCountsService countsService;
+    private final RecommendationHandler recommendationHandler;
 
 
     @Scheduled(cron = "0 7 0 * * ?")
@@ -41,8 +43,11 @@ public class MyScheduledTasks {
     public void likeTask3() {
         prepareTask(likeService::likeRaTask, TaskConstant.LIKE_RATING_TASK);
     }
-
-
+    // 每两小时对动漫热度进行统计计算！~
+    @Scheduled(cron = "0 0 0/2 * * *")
+    public void topAnimeTask() {
+        prepareTask(recommendationHandler::topAnimeTask, TaskConstant.TOP_ANIME_TASK);
+    }
     /**
      * 准备并执行指定的定时任务
      *

@@ -5,6 +5,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
+import static com.ithe.huabaiplayer.common.constant.RedisKeyConstants.DONGMAN_FENPIAN;
+
 /**
  * @interface FileStorage
  * @Author hua bai
@@ -33,6 +35,7 @@ public interface FileStorage {
     String getOrigin(String url);
 
     void deleteAvatar(String avatar);
+    void deleteImage(String image);
 
     void uploadAvatar(String avatar, MultipartFile file) throws IOException;
 
@@ -44,4 +47,7 @@ public interface FileStorage {
      * @param path 原名字的完整路径
      */
     boolean updateFolderName(String path, String newName);
+    default String getKey(String dirPath) {
+        return DONGMAN_FENPIAN + dirPath;
+    }
 }

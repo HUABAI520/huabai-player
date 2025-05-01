@@ -225,4 +225,7 @@ public class CollectionHandler {
         return collectionsService.updateBatch(collections);
     }
 
+    public Integer countCollections(Long userId) {
+        return Math.toIntExact(collectionsService.count(collectionsService.query().eq(Collections::getUserId, userId)));
+    }
 }

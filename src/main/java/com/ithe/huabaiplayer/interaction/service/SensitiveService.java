@@ -5,7 +5,6 @@ import com.ithe.huabaiplayer.common.ErrorCode;
 import com.ithe.huabaiplayer.common.exception.BusinessException;
 import com.ithe.huabaiplayer.common.model.dto.RestClient.ApiResponse;
 import com.ithe.huabaiplayer.common.service.RestClient;
-import com.ithe.huabaiplayer.interaction.model.enums.HttpUrlEnum;
 import com.ithe.huabaiplayer.interaction.model.okHttp.analyze.AnalyzeRequest;
 import com.ithe.huabaiplayer.interaction.model.okHttp.analyze.AnalyzeResponse;
 import com.ithe.huabaiplayer.interaction.model.okHttp.sensitive.SensitiveQueryReq;
@@ -13,6 +12,7 @@ import com.ithe.huabaiplayer.interaction.model.okHttp.sensitive.SensitiveQueryRe
 import com.ithe.huabaiplayer.interaction.model.okHttp.sensitive.SensitiveUpdateReq;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -27,7 +27,9 @@ import java.util.Map;
 public class SensitiveService {
 
     private final RestClient restClient;
-    private final String FLASK__URL = HttpUrlEnum.FLASK_ANALYSIS_URL.getValue();
+
+    @Value("${python.analysis}")
+    private String FLASK__URL;
 
     public AnalyzeResponse analyzeText(String text) {
         // 构造请求体

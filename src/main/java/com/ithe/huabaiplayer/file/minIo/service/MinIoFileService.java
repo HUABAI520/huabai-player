@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 
-import static com.ithe.huabaiplayer.common.constant.RedisKeyConstants.DONGMAN_FENPIAN;
 import static com.ithe.huabaiplayer.common.constant.RedisKeyConstants.DONGMAN_INDEX;
 
 /**
@@ -42,9 +41,6 @@ public class MinIoFileService implements FileStorage {
     public static final String FILE_SPLIT = "/";
     public static final int TWO_HOURS = 60 * 2;
 
-    public String getKey(String dirPath) {
-        return DONGMAN_FENPIAN + dirPath;
-    }
 
     @Override
     public Integer uploadFen(MultipartFile file, Long animeId, Long videoId,
@@ -55,10 +51,12 @@ public class MinIoFileService implements FileStorage {
         if (size > MAX_PART_SIZE) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "分片文件大小超过限制");
         }
+
         // 暂时的文件夹
         String dirPath = fullPath + FILE_SPLIT + fileName;
         // 放置到暂时的文件夹中的分片文件 即 // 每个分片的文件名
         String objectName = dirPath + FILE_SPLIT + "part-" + partNumber + ".tmp";
+        boolean isExist = minIoService.hasFolder(BucketEnum.HUA_VIDEO.getBucketName(), objectName);
         try {
             minIoService.uploadObject(BucketEnum.HUA_VIDEO.getBucketName(), objectName, file.getInputStream(), size);
         } catch (IOException e) {
@@ -95,13 +93,17 @@ public class MinIoFileService implements FileStorage {
         }
         if (o.getPartNumber() + 1 != partNumber) {
             if (partNumber.equals(1)) {
+                // 可能会存在 partNumber = 1 而o 存在的情况 第一次 如果没有该文件 那就是redis 出问题了 就直接设置redis
+                // 如果之前不存在 表示 redis 出问题了就不用删除 this.deleteFenPath(dirPath);
                 // 表明 用户重新传递了对应路径相同名字文件 因为没用hash 不知道是否还是同一个文件 故删除之前的
                 o.setPartNumber(partNumber);
                 o.setTotalParts(total);
                 o.setPath(path);
                 redisService.set(key, o);
                 redisService.expire(key, TWO_HOURS);
-                this.deleteFenPath(dirPath);
+                if (isExist) {
+                    this.deleteFenPath(dirPath);
+                }
                 return partNumber;
             }
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "分片索引错误~这次的分片索引不等于上次索引+1");
@@ -208,6 +210,14 @@ public class MinIoFileService implements FileStorage {
     @Override
     public void deleteAvatar(String avatar) {
         minIoService.deleteFile(BucketEnum.HUA_AVATAR.getBucketName(), avatar);
+    }
+
+    @Override
+    public void deleteImage(String image) {
+        if (image.isEmpty()) {
+            return;
+        }
+        minIoService.deleteFile(BucketEnum.HUA_PICTURE.getBucketName(), image);
     }
 
     @Override

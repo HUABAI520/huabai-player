@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 import static com.ithe.huabaiplayer.common.constant.UserConstant.ADMIN_ROLE;
@@ -79,7 +80,7 @@ public class AnimeController {
     @AuthCheck
     public BaseResponse<AnimeVideosResp> get(Long videoId) {
         UserVO user = UserContext.getUser();
-        return ResultUtils.success(videoService.get(videoId,user.getId()));
+        return ResultUtils.success(videoService.get(videoId, user.getId()));
     }
 
     // 上传视频分片
@@ -90,9 +91,9 @@ public class AnimeController {
             String fileSuffix,
             @PathVariable("fileName") String fileName,
             @PathVariable("partNumber") Integer partNumber,
-            @PathVariable("total") Integer total,Integer duration) {
+            @PathVariable("total") Integer total, Integer duration) throws IOException {
         return ResultUtils.success(videoService.uploadVideo(
-                multipartFile, animeId, videoId, fileSuffix, fileName, partNumber, total,duration));
+                multipartFile, animeId, videoId, fileSuffix, fileName, partNumber, total, duration));
 //        return ResultUtils.success(s3MultipartUploadService.uploadVideo(
 //                multipartFile, animeId, videoId, fileSuffix, fileName, partNumber, total));
     }
@@ -172,5 +173,23 @@ public class AnimeController {
         return ResultUtils.success(animeIndexService.list(name));
     }
 
+    // 更新对应视频的名称
+    @PutMapping("/update/video/{videoId}")
+    @AuthCheck(mustRole = ADMIN_ROLE)
+    public BaseResponse<Boolean> updateVideoName(@PathVariable("videoId") Long videoId,
+                                                 String name) {
+        return ResultUtils.success(videoService.updateVideoName(videoId, name));
+    }
 
+    // 对应动漫下视频的排序
+    @PutMapping("/update/video/sort/{animeId}")
+    public BaseResponse<Boolean> updateVideoSort(@PathVariable("animeId") Long animeId,
+                                                 @RequestBody List<Long> videoSortReqs) {
+        return ResultUtils.success(animeIndexService.updateVideoSort(animeId, videoSortReqs));
+    }
+    // 删除对应视频信息
+    @DeleteMapping("/video/delete/{videoId}")
+    public BaseResponse<Boolean> deleteVideoMsg(@PathVariable("videoId") Long videoId) {
+        return ResultUtils.success(videoService.deleteVideoFileMsg(videoId));
+    }
 }

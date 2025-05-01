@@ -40,6 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -51,10 +52,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
+import static com.ithe.huabaiplayer.common.constant.RedisKeyConstants.HOT_ANIME_KEY;
 import static com.ithe.huabaiplayer.common.utils.HuaUtils.reBuilderPath;
 import static com.ithe.huabaiplayer.file.model.enums.FileTypeEnum.FILE;
 import static com.ithe.huabaiplayer.file.model.enums.FileTypeEnum.FOLDER;
 import static com.ithe.huabaiplayer.player.model.entity.table.AnimeIndexTableDef.ANIME_INDEX;
+import static com.ithe.huabaiplayer.player.model.entity.table.AnimePlayCountsTableDef.ANIME_PLAY_COUNTS;
 import static com.ithe.huabaiplayer.player.model.entity.table.HuaAnimeTypeTableDef.HUA_ANIME_TYPE;
 import static com.ithe.huabaiplayer.player.model.entity.table.HuaTypeTableDef.HUA_TYPE;
 
@@ -69,6 +72,7 @@ import static com.ithe.huabaiplayer.player.model.entity.table.HuaTypeTableDef.HU
 public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIndex> implements AnimeIndexService {
 
     public static final String FILE_SPLIT = "/";
+
     @Autowired
     private PlayerProperties playerProperties;
     @Autowired
@@ -103,6 +107,12 @@ public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIn
                     }
                     return AnimeIndexVo.of(r);
                 }).toList();
+    }
+
+    @Override
+    public List<AnimeIndexResp> getAnimeIndexRespByIds(List<Long> animeId) {
+        List<AnimeIndexVo> animeIndexVos = this.listAs(query().in(AnimeIndex::getId, animeId), AnimeIndexVo.class);
+        return indexVo2Resp(animeIndexVos);
     }
 
     @Override
@@ -563,4 +573,21 @@ public class AnimeIndexServiceImpl extends ServiceImpl<AnimeIndexMapper, AnimeIn
                 listAs(query().eq(AnimeIndex::getSeriesId, sId).orderBy(AnimeIndex::getIssueTime, true), AnimeIndexVo.class)
         );
     }
+
+    @Override
+
+    public Boolean updateVideoSort(Long animeId, List<Long> videoSortReqs) {
+        // 先查询该动漫所有的视频
+        List<AnimeVideos> animeVideos = animeVideosService.list(query().eq(AnimeVideos::getAnimeId, animeId));
+        if (CollectionUtils.isEmpty(animeVideos) || animeVideos.size() != videoSortReqs.size()) {
+            return false;
+        }
+        animeVideos.clear();
+        for (int i = 0; i < videoSortReqs.size(); i++) {
+            animeVideos.add(AnimeVideos.builder().id(videoSortReqs.get(i)).rank(i + 1).build());
+        }
+        return animeVideosService.updateBatch(animeVideos);
+    }
+
+
 }

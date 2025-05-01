@@ -69,12 +69,13 @@ public class codeTests {
 
         //设置根包
         globalConfig.getPackageConfig()
-                .setBasePackage("com.ithe.huabaiplayer.interaction");
+                .setBasePackage("com.ithe.huabaiplayer.features");
 
         //设置表前缀和只生成哪些表，setGenerateTable 未配置时，生成所有表
         globalConfig.getStrategyConfig()
                 .setTablePrefix("")
-                .setGenerateTable("content_report_record","content_report_summary");
+                .setGenerateTable("user_features","weekly_user_features","monthly_user_features",
+                        "daily_user_features","daily_recommendations");
 
         //设置生成 entity 并启用 Lombok
         globalConfig.enableEntity()

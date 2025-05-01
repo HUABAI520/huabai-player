@@ -42,7 +42,6 @@ public class CollectionController {
         Long userId = UserContext.getUser().getId();
         return ResultUtils.success(service.pageCollections(current, pageSize, userId));
     }
-
     // 2. 分页查询收藏夹的内容 分页大小固定40 且可以根据关键词查询（暂定匹配动漫名）todo 扩展功能在所有的收藏夹搜索信息
     @AuthCheck
     @GetMapping("/collections/anime")
@@ -50,7 +49,6 @@ public class CollectionController {
         Long userId = UserContext.getUser().getId();
         return ResultUtils.success(service.pageCollectionMsg(cid, current, pageSize, key, userId));
     }
-
     // 3. 根据用户id + 动漫id 查询是否收藏和和被哪些收藏夹id 返回收藏夹id列表 有代表收藏 且后续可以知道哪些收藏夹收录了
     @AuthCheck
     @GetMapping("/collections/anime/is")
@@ -58,7 +56,6 @@ public class CollectionController {
         Long userId = UserContext.getUser().getId();
         return ResultUtils.success(service.isCollections(userId, aid));
     }
-
     // 4. 收藏夹 id + 用户id + 动漫id 进行收藏
     @AuthCheck
     @GetMapping("/collections/anime/add")
@@ -66,7 +63,6 @@ public class CollectionController {
         Long userId = UserContext.getUser().getId();
         return ResultUtils.success(service.addCollections(cid, userId, aid));
     }
-
     // 5. 通过 aid + cid 进行取消收藏
     @AuthCheck
     @DeleteMapping("/collections/anime/remove")
@@ -74,7 +70,6 @@ public class CollectionController {
         Long userId = UserContext.getUser().getId();
         return ResultUtils.success(service.removeCollections(aId, cId, userId));
     }
-
     // 6. 传递用户所有的收藏夹id进行重新排序，但是默认收藏夹只能为第一个
     @AuthCheck
     @PutMapping("/collections/sort")
@@ -82,7 +77,6 @@ public class CollectionController {
         Long userId = UserContext.getUser().getId();
         return ResultUtils.success(service.sortCollections(collectionIds, userId));
     }
-
     // 7. 传递用户id 和 收藏夹id 进行删除，但是默认收藏夹不能删除
     @AuthCheck
     @DeleteMapping("/collections/remove")
@@ -90,7 +84,6 @@ public class CollectionController {
         Long userId = UserContext.getUser().getId();
         return ResultUtils.success(service.removeCollection(cid, userId));
     }
-
     // 8. 传递用户id 返回 收藏夹id 进行创建 （名称必填）
     @AuthCheck
     @PostMapping("/collections/add")
@@ -98,12 +91,18 @@ public class CollectionController {
         Long userId = UserContext.getUser().getId();
         return ResultUtils.success(service.addCollection(collectionsAddReq, userId));
     }
-
     // 9.  收藏夹id 进行修改信息 （名称必填）
     @AuthCheck
     @PutMapping("/collections/update")
     public BaseResponse<Boolean> collectionsUpdate(@Valid @RequestBody CollectionsUpdateReq collectionsUpdateReq) {
         Long userId = UserContext.getUser().getId();
         return ResultUtils.success(service.updateCollection(collectionsUpdateReq, userId));
+    }
+    // 10 查询该用户收藏夹个数
+    @AuthCheck
+    @GetMapping("/collections/count")
+    public BaseResponse<Integer> collectionsCount() {
+        Long userId = UserContext.getUser().getId();
+        return ResultUtils.success(service.countCollections(userId));
     }
 }

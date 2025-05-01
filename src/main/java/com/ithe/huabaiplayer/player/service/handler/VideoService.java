@@ -34,9 +34,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
 
 import static com.ithe.huabaiplayer.common.constant.RedisKeyConstants.DONGMAN_FENPIAN;
 import static com.ithe.huabaiplayer.common.constant.RedisKeyConstants.DONGMAN_INDEX;
@@ -126,7 +128,7 @@ public class VideoService {
     @Transactional(rollbackFor = Exception.class)
     public Integer uploadVideo(MultipartFile file, Long animeId,
                                Long videoId, String fileSuffix, String fileName,
-                               Integer partNumber, Integer total, Integer duration) {
+                               Integer partNumber, Integer total, Integer duration) throws IOException {
         FileNodes fullNode = getFullPath(animeId);
         String fullPath = fullNode.getFullPath();
         // 通常自己不会遇到这个上传了视频前端还能上传
@@ -138,9 +140,12 @@ public class VideoService {
 
         // 最大分片大小 (100MB)
         final long MAX_PART_SIZE = 100L * 1024 * 1024;
-
+        // 计时
+        long start = System.currentTimeMillis();
         Integer x = fileService().uploadFen(file, animeId, videoId, fileSuffix, fileName,
                 partNumber, total, fullPath, MAX_PART_SIZE, fullNode);
+        long end = System.currentTimeMillis();
+        log.info("上传分片 {} 成功，耗时 {} ms", partNumber, end - start);
         // 不为null 表示未上传全部分片
         if (x != null) {
             return x;
@@ -175,7 +180,7 @@ public class VideoService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public Long mergeVideo(Long animeId, FileNodes fileNode, String fileName, String fileSuffix, Long videoId) {
+    public Long mergeVideo(Long animeId, FileNodes fileNode, String fileName, String fileSuffix, Long videoId) throws IOException {
         String fullPath = fileNode.getFullPath();
         Long id = fileNode.getId();
         if (StringUtils.isBlank(fullPath)) {
@@ -207,6 +212,10 @@ public class VideoService {
             size = fileService().mergeFen(animeId, finalPath, dirPath, fileId);
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "合并分片失败~:" + e.getMessage());
+        } finally {
+            fileService().deleteFenPath(dirPath);
+            redisService.delete(DONGMAN_INDEX + animeId);
+            redisService.delete(fileService().getKey(dirPath));
         }
         fileNodesService.updateChain().set(FileNodes::getSize, size).eq(FileNodes::getId, fileId).update();
         return videoId;
@@ -236,17 +245,21 @@ public class VideoService {
         if (fileNodes == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "该视频文件不存在~");
         }
+
         boolean b = fileNodesService.removeById(file);
         if (!b) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "删除文件失败~");
         }
         boolean update = animeVideosService.updateChain()
                 .set(AnimeVideos::getFile, null)
+                .set(AnimeVideos::getDuration, null)
+                .set(AnimeVideos::getImage, null)
                 .eq(AnimeVideos::getId, videoId).update();
         if (!update) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "更新视频信息失败~");
         }
         String fullPath = fileNodes.getFullPath();
+        fileService().deleteImage(videos.getImage());
         return fileService().deleteVideoFile(fullPath);
     }
 
@@ -331,5 +344,24 @@ public class VideoService {
     public Boolean deleteRecord(Long userId) {
         return UpdateChain.of(VideoRecordLatest.class).eq(VideoRecordLatest::getUserId, userId).remove();
 
+    }
+
+    public Boolean updateVideoName(Long videoId, String name) {
+        return animeVideosService.updateChain()
+                .eq(AnimeVideos::getId, videoId)
+                .set(AnimeVideos::getTitle, name).update();
+    }
+
+    public Boolean deleteVideoFileMsg(Long videoId) {
+        AnimeVideos byId = animeVideosService.getById(videoId);
+        if (byId == null) {
+            return false;
+        }
+        boolean nonNull = Objects.nonNull(byId.getFile());
+        if (nonNull) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "该集视频文件存在，无法删除哦~");
+        }
+        return animeVideosService.updateChain().eq(AnimeVideos::getId, videoId)
+                .remove();
     }
 }

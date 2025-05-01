@@ -31,5 +31,6 @@ public interface RedisKeyConstants {
     String REGISTRATION_CODE_PREFIX = "registration:code:";
     String LOGIN_CODE_PREFIX = "login:code:";
     String RESET_PASSWORD_CODE_PREFIX = "reset:password:code:";
+     String HOT_ANIME_KEY = "anime:hot";
 
 }

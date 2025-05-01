@@ -11,4 +11,5 @@ public interface TaskConstant {
     String LIKE_BARRAGE_TASK = "like-update-BARRAGE-3-min";
     String LIKE_RATING_TASK = "like-update-RATING-4-min";
     String PLAY_COUNTS_TASK = "play-counts-5-min";
+    String TOP_ANIME_TASK = "top-anime-2-hour";
 }

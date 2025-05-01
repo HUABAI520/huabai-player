@@ -25,7 +25,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Comparator;
 
-import static com.ithe.huabaiplayer.common.constant.RedisKeyConstants.DONGMAN_FENPIAN;
 import static com.ithe.huabaiplayer.common.constant.RedisKeyConstants.DONGMAN_INDEX;
 
 /**
@@ -46,9 +45,7 @@ public class LocalFileService implements FileStorage {
 
     public static final int TWO_HOURS = 60 * 2;
 
-    public String getKey(Path dirPath) {
-        return DONGMAN_FENPIAN + dirPath.toString();
-    }
+
 
     @Override
     public Integer uploadFen(MultipartFile file, Long animeId, Long videoId,
@@ -81,7 +78,7 @@ public class LocalFileService implements FileStorage {
                     }
                 }
             }
-            String key = getKey(dirPath);
+            String key = getKey(dirPath.toString());
             FenPian o = redisService.get(key) == null ? null : (FenPian) redisService.get(key);
             if (o == null) {
                 if (partNumber != 1 && total != 1) {
@@ -170,7 +167,7 @@ public class LocalFileService implements FileStorage {
         }
         // 清理临时分片文件
         deleteFenPath(dirPath);
-        redisService.delete(getKey(dirPaths));
+        redisService.delete(getKey(dirPaths.toString()));
         redisService.delete(DONGMAN_INDEX + animeId);
         return size;
     }
@@ -245,6 +242,11 @@ public class LocalFileService implements FileStorage {
     @Override
     public void deleteAvatar(String avatar) {
         // todo
+    }
+
+    @Override
+    public void deleteImage(String image) {
+
     }
 
     @Override

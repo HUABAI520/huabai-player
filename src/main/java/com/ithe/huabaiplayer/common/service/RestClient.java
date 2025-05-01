@@ -1,9 +1,11 @@
 package com.ithe.huabaiplayer.common.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ithe.huabaiplayer.common.exception.RestClientException;
 import com.ithe.huabaiplayer.common.model.dto.RestClient.ApiResponse;
+import com.ithe.huabaiplayer.common.model.dto.RestClient.TypeReference;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.FormBody;
 import okhttp3.Headers;
@@ -48,21 +50,42 @@ public class RestClient {
         return new RequestBuilder(this, "DELETE", url);
     }
 
-    private <T> ApiResponse<T> executeRequest(Request request, Class<T> responseType) {
+    // 支持简单的数据类型
+//    private <T> ApiResponse<T> executeRequest(Request request, Class<T> responseType) {
+//        try (Response response = okHttpClient.newCall(request).execute()) {
+//            ResponseBody body = response.body();
+//            if (body == null) {
+//                return new ApiResponse<>(response.code(), null);
+//            }
+//
+//            if (responseType == String.class) {
+//                return new ApiResponse<>(response.code(), (T) body.string());
+//            }
+//
+//            return new ApiResponse<>(
+//                    response.code(),
+//                    pythonObjectMapper.readValue(body.byteStream(), responseType)
+//            );
+//        } catch (IOException e) {
+//            throw new RestClientException("Request execution failed", e);
+//        }
+//    }
+
+    private <T> ApiResponse<T> executeRequest(Request request, JavaType javaType) {
         try (Response response = okHttpClient.newCall(request).execute()) {
             ResponseBody body = response.body();
             if (body == null) {
                 return new ApiResponse<>(response.code(), null);
             }
 
-            if (responseType == String.class) {
+            // 处理 String 类型
+            if (javaType.getRawClass() == String.class) {
                 return new ApiResponse<>(response.code(), (T) body.string());
             }
 
-            return new ApiResponse<>(
-                    response.code(),
-                    pythonObjectMapper.readValue(body.byteStream(), responseType)
-            );
+            // 使用完整的类型信息反序列化
+            T value = pythonObjectMapper.readValue(body.byteStream(), javaType);
+            return new ApiResponse<>(response.code(), value);
         } catch (IOException e) {
             throw new RestClientException("Request execution failed", e);
         }
@@ -113,9 +136,19 @@ public class RestClient {
             return this;
         }
 
+
         public <T> ApiResponse<T> execute(Class<T> responseType) {
+            return executeInternal(responseType, null);
+        }
+
+        public <T> ApiResponse<T> execute(TypeReference<T> typeReference) {
+            return executeInternal(null, typeReference);
+        }
+
+        private <T> ApiResponse<T> executeInternal(Class<T> responseClass, TypeReference<T> typeReference) {
             try {
-                HttpUrl httpUrl = urlBuilder.build();  // 直接构建最终 URL
+                // 构建请求逻辑（与原方法相同）
+                HttpUrl httpUrl = urlBuilder.build();
                 log.info("Request URL: {}", httpUrl);
                 RequestBody body = null;
                 if (jsonBody != null) {
@@ -124,17 +157,47 @@ public class RestClient {
                 } else if ("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method)) {
                     body = formBuilder.build();
                 }
-
                 Request request = new Request.Builder()
                         .url(httpUrl)
                         .method(method, body)
                         .headers(headers.build())
                         .build();
 
-                return restClient.executeRequest(request, responseType);
+                // 确定 JavaType
+                JavaType javaType;
+                if (typeReference != null) {
+                    javaType = restClient.pythonObjectMapper.getTypeFactory().constructType(typeReference.getType());
+                } else {
+                    javaType = restClient.pythonObjectMapper.getTypeFactory().constructType(responseClass);
+                }
+
+                return restClient.executeRequest(request, javaType);
             } catch (JsonProcessingException e) {
                 throw new RestClientException("JSON serialization failed", e);
             }
         }
+//        public <T> ApiResponse<T> execute(Class<T> responseType) {
+//            try {
+//                HttpUrl httpUrl = urlBuilder.build();  // 直接构建最终 URL
+//                log.info("Request URL: {}", httpUrl);
+//                RequestBody body = null;
+//                if (jsonBody != null) {
+//                    String json = restClient.pythonObjectMapper.writeValueAsString(jsonBody);
+//                    body = RequestBody.create(json, MediaType.get("application/json"));
+//                } else if ("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method)) {
+//                    body = formBuilder.build();
+//                }
+//
+//                Request request = new Request.Builder()
+//                        .url(httpUrl)
+//                        .method(method, body)
+//                        .headers(headers.build())
+//                        .build();
+//
+//                return restClient.executeRequest(request, responseType);
+//            } catch (JsonProcessingException e) {
+//                throw new RestClientException("JSON serialization failed", e);
+//            }
+//        }
     }
 }
