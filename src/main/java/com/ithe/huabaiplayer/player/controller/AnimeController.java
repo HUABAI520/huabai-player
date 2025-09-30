@@ -92,6 +92,8 @@ public class AnimeController {
             @PathVariable("fileName") String fileName,
             @PathVariable("partNumber") Integer partNumber,
             @PathVariable("total") Integer total, Integer duration) throws IOException {
+        // 对路径字符串做trim()处理（去除首尾空格），并校验是否包含 Windows 非法字符（如:*?"<>|）。
+        fileName = fileName.trim().replaceAll("[\\\\/:*?\"<>|]", "_");
         return ResultUtils.success(videoService.uploadVideo(
                 multipartFile, animeId, videoId, fileSuffix, fileName, partNumber, total, duration));
 //        return ResultUtils.success(s3MultipartUploadService.uploadVideo(
